@@ -33,6 +33,8 @@
 # 2022-11-20 (v0.0.6) added set Movies
 # 2022-11-21 (v0.0.7) code refactoring
 # 2022-11-21 (v0.0.8) experimental ct colorpicker
+# 2022-11-21 (v0.1.0) fixed ct colorpicker and published to fhem forum
+#                     https://forum.fhem.de/index.php/topic,130432.0.html
 #
 ###############################################################################
 
@@ -41,7 +43,7 @@ package main;
 use strict;
 use warnings;
 
-my $fversion = "31_Twinkly.pm:0.0.8/2022-11-21";
+my $fversion = "31_Twinkly.pm:0.1.0/2022-11-21";
 my $author  = 'https://forum.fhem.de/index.php?action=profile;u=23907';
 
 sub Twinkly_Initialize($) {
@@ -146,10 +148,10 @@ sub Define($$) {
     # Room automatisch setzem
     CommandAttr( undef, $name . ' room Twinkly' ) if ( AttrVal( $name, 'room', 'none' ) eq 'none' );
   
-    # devStateIcon setzen für Anzeige
+    # devStateIcon setzen f¸r Anzeige
     # CommandAttr( undef, $name . ' devStateIcon online:10px-kreis-gruen offline:10px-kreis-rot' ) if ( AttrVal( $name, 'devStateIcon', 'none' ) eq 'none' );
   
-    # webCmd setzen für Anzeige
+    # webCmd setzen f¸r Anzeige
     #CommandAttr( undef, $name . ' webCmd aww:brightness:hue:on:off' ) if ( AttrVal( $name, 'webCmd', 'none' ) eq 'none' );
   
     Log3 $name, 3, "Twinkly ($name) - defined with IP $hash->{IP}";
@@ -236,7 +238,7 @@ sub Attr(@) {
       CommandAttr( undef, $name . ' icon hue_room_nursery' ) if ( AttrVal( $name, 'icon', 'none' ) eq 'none' and $attrVal =~ /Spritzer/);
       CommandAttr( undef, $name . ' icon hue_filled_lightstrip' ) if ( AttrVal( $name, 'icon', 'none' ) eq 'none' and $attrVal =~ /(String|Line)/);
       CommandAttr( undef, $name . ' icon light_fairy_lights' ) if ( AttrVal( $name, 'icon', 'none' ) eq 'none' and $attrVal =~ /(Cluster|Festoon)/);
-	  # webCmd setzen für Frontend, falls Model angegeben / ermittelt wurde
+	  # webCmd setzen f¸r Frontend, falls Model angegeben / ermittelt wurde
 	  CommandAttr( undef, $name . ' webCmd brightness:hue:on:off' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' and $attrVal =~ /(RGB|Spritzer|LightTree)/ );
 	  CommandAttr( undef, $name . ' webCmd brightness:aww:on:off' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' and $attrVal =~ /AWW/);
     }
@@ -338,7 +340,7 @@ sub Set($$@) {
     my $handle;
     my @movies;
     
-    # Vorhandene Movies ermitteln und aufbereiten fŸr den Set-Befehl
+    # Vorhandene Movies ermitteln und aufbereiten für den Set-Befehl
     # Wenn es nur ein Movie gibt, gibt es keinen seperator (,)
     my ($movies) = getMovies($hash);
     if ($movies ne 'undef') {
@@ -374,9 +376,10 @@ sub Set($$@) {
 	  $r = int($r);
 	  $g = int($g);
 	  $b = int($b);
-	  my $rgb = '{"red":' .$r .',"green":' .$g .',"blue"' .$b .'}';
+	  my $rgb = '{"red":' .$r .',"green":' .$g .',"blue":' .$b .'}';
+    Log3 $name, 4, " ($name) Set - with POST und Token: " .$hash->{TOKEN} ." - rgb -> $rgb ";
 	  Twinkly_PerformHttpRequest($hash,'POST','/xled/v1/led/color',$rgb);
-      readingsSingleUpdate( $hash, 'red', $r, 1 );
+    readingsSingleUpdate( $hash, 'red', $r, 1 );
 	  readingsSingleUpdate( $hash, 'green', $g, 1 );
 	  readingsSingleUpdate( $hash, 'blue', $b, 1 );
 	  readingsSingleUpdate( $hash, 'aww', $aww, 1 );
@@ -436,7 +439,7 @@ sub Set($$@) {
       if (ReadingsVal($name, 'mode','') ne 'movie') {
         Twinkly_PerformHttpRequest($hash,'POST','/xled/v1/led/mode','movie');
       }
-      # FŸr den POST benštigt man die ID von dem jeweiligen Movie, daher muss 
+      # Für den POST benötigt man die ID von dem jeweiligen Movie, daher muss 
       # mit dem Namen ins Array den jeweiligen Index raussuchen um den POST
       # Befehl abzusetzen
       my $movie = $args[0];
@@ -587,7 +590,7 @@ sub getMovies($) {
   
   for (my $i = 0; $i <= 15 ; $i++) {
     # Falls im Namen ein seperator (,) vorkommt, muss dieser ersetzt werden,
-    # da ansonsten die Trennung fŸr den Set-Befehl nicht korrekt ausschaut
+    # da ansonsten die Trennung für den Set-Befehl nicht korrekt ausschaut
     if ($z == 1) {
       $movie  = ReadingsVal($device,'movies_' .$z .'_name','Undef');
       $movie  =~ s/,//g;
@@ -677,7 +680,7 @@ sub Twinkly_PerformHttpRequest($$$$) {
 					timeout    => 10,
 					hash       => $hash,   	# Muss gesetzt werden, damit die Callback funktion wieder $hash hat
 					method     => $method, 	# Lesen von Inhalten
-					header     => $header, 	# Den Header gemäß abzufragender Daten ändern
+					header     => $header, 	# Den Header gem‰ﬂ abzufragender Daten ‰ndern
 					data	   => $data,
 					callback   => \&Twinkly_ParseHttpResponse
 					# Diese Funktion soll das Ergebnis dieser HTTP Anfrage bearbeiten
@@ -693,11 +696,11 @@ sub Twinkly_ParseHttpResponse($) {
 	my $device = $hash->{NAME};
 	# wenn ein Fehler bei der HTTP Abfrage aufgetreten ist wie z.B. Timeout, weil IP nicht erreichbar ist
 	if($err ne "") {
-		Log3 $name, 3, "error while requesting ".$param->{url}." - $err"; # Eintrag fŸrs Log
+		Log3 $name, 3, "error while requesting ".$param->{url}." - $err"; # Eintrag fürs Log
 		readingsSingleUpdate( $hash, "fullResponse", "ERROR", 1 );
 		$hash->{NETWORK_STATE} = 'offline';
 	}
-	# wenn die Abfrage erfolgreich war ($data enthŠlt die Ergebnisdaten des HTTP Aufrufes)
+	# wenn die Abfrage erfolgreich war ($data enthält die Ergebnisdaten des HTTP Aufrufes)
 	elsif($data ne "") {
 		$hash->{NETWORK_STATE} = 'online';
 		if (ReadingsVal($name,'mode','') =~ /(color|demo|effect|movie|playlist|rt)/) {
@@ -823,7 +826,7 @@ sub parseJson($$$) {
 =pod
 =item device
 =item summary       Modul to control Twinkly devices like Strings, Cluster or Spritzer
-=item summary_DE    Modul Twinkly GerŠte zu steuern (Mode/Color/Helligkeit/...)
+=item summary_DE    Modul Twinkly Geräte zu steuern (Mode/Color/Helligkeit/...)
 
 =begin html
 
@@ -944,7 +947,7 @@ sub parseJson($$$) {
   <ul>
     <li>disable - deaktiviert das Device</li>
     <li>interval - Interval in Sekunden zwischen zwei Abfragen</li>
-    <li>disabledForIntervals - deaktiviert das GerŠt fŸr den angegebenen Zeitinterval (13:00-18:30 or 13:00-18:30 22:00-23:00)</li>
+    <li>disabledForIntervals - deaktiviert das Gerät für den angegebenen Zeitinterval (13:00-18:30 or 13:00-18:30 22:00-23:00)</li>
     <li>model - setzt das Model</li>
   </ul>
 </ul>
