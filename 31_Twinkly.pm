@@ -35,6 +35,8 @@
 # 2022-11-21 (v0.0.8) experimental ct colorpicker
 # 2022-11-21 (v0.1.0) fixed ct colorpicker and published to fhem forum
 #                     https://forum.fhem.de/index.php/topic,130432.0.html
+# 2022-11-21 (v0.1.1) message in INTERNAL if no movie(s) found on device
+# 2022-11-21 (v0.1.2) warning messages if no movies found and cmd 'on' sent
 #
 ###############################################################################
 
@@ -43,7 +45,7 @@ package main;
 use strict;
 use warnings;
 
-my $fversion = "31_Twinkly.pm:0.1.0/2022-11-21";
+my $fversion = "31_Twinkly.pm:0.1.2/2022-11-21";
 my $author  = 'https://forum.fhem.de/index.php?action=profile;u=23907';
 
 sub Twinkly_Initialize($) {
@@ -352,6 +354,10 @@ sub Set($$@) {
         @movies = $movies;
       }
     }
+    # Keine Movies geuploaded, bitte zuerst Movies hochladen via Twinkly App und speichern
+    elsif ($movies eq 'undef') {
+      $hash->{message} = 'No movies found. Upload first via Twinkly App.';
+    }
   
     if ( $cmd eq "hue" ) {
       return "usage: devicename <name> - cmd -> $cmd - value -> " .$args[0] ." - args -> @args" if ( @args < 1 );
@@ -414,6 +420,7 @@ sub Set($$@) {
     }
     elsif ( $cmd eq 'on' ) {
       return "usage: on" if ( @args != 0 );
+      Log3 $name, 2, "set-Befehl ON - Warning, no Movies found in the Readings. Please use 'get <name> Movies' first. Maybe no movies uploaded / saved via Twinkly App yet?" if ($movies eq 'undef');
       Twinkly_PerformHttpRequest($hash,'POST','/xled/v1/led/mode','movie');
       readingsSingleUpdate( $hash, 'state', 'on', 1 );
       return;
@@ -444,7 +451,7 @@ sub Set($$@) {
       # Befehl abzusetzen
       my $movie = $args[0];
       my $idx = firstidx { $_ eq $movie } @movies;
-      Log3 $name, 0, "set-Befehl - Movie -> $movie - Index -> $idx";
+      #Log3 $name, 0, "set-Befehl - Movie -> $movie - Index -> $idx";
       Twinkly_PerformHttpRequest($hash,'POST','/xled/v1/movies/current',$idx);
       readingsSingleUpdate( $hash, 'movie', $movie, 1 );
       return;
@@ -734,6 +741,10 @@ sub Twinkly_ParseHttpResponse($) {
 			Log3 $name, 4, "Twinkly ($name) - Abfrage vom Token fehlgeschlagen";
 			$hash->{TOKEN} = '';
 		}
+		elsif ($ret !~ /OK/) {
+			# Abfrage fehlgeschlagen - Error Code ausgeben
+			Log3 $name, 2, "Twinkly ($name) - Error: $ret";
+		}
 	}
 }
 
@@ -743,7 +754,7 @@ sub parseJson($$$) {
 	my $name   = $hash->{NAME};
 	no strict 'refs';
   
-	if ($data eq 'Invalid Token') {
+  if ($data eq 'Invalid Token') {
 		Log3 $name, 4, "Twinkly ($name) - Invalid Token (vermutlich abgelaufen)";
 		return;
 	}
