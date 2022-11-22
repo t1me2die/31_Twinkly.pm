@@ -592,7 +592,7 @@ sub getMovies($) {
   
   for (my $i = 0; $i <= 15 ; $i++) {
     # Falls im Namen ein seperator (,) vorkommt, muss dieser ersetzt werden,
-    # da ansonsten die Trennung fŸr den Set-Befehl nicht korrekt ausschaut
+    # da ansonsten die Trennung für den Set-Befehl nicht korrekt ausschaut
     if ($z == 1) {
       $movie  = ReadingsVal($device,'movies_' .$z .'_name','Undef');
       $movie  =~ s/,//g;
@@ -867,8 +867,9 @@ sub parseJson($$$) {
   <b>Set</b>
   <ul>
     <li>brightness - set brightness to device</li>
-    <li>effect_id  - set a standard effect to device</li>
-	<li>hue        - set hue color to device</li>
+    <li>ct         - set ct colortemperatur to device (AWW devices and RGBW)</li>
+	<li>effect_id  - set a standard effect to device</li>
+	<li>hue        - set hue color to device (RGB and RGBW devices)</li>
 	<li>mode       - set different mode to device</li>
 	<li>movie      - switch between uploaded /saved movies - use "get Device Movies" first!</li>
 	<li>on         - switch device on in the movie mode</li>
