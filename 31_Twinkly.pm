@@ -37,6 +37,7 @@
 #                     https://forum.fhem.de/index.php/topic,130432.0.html
 # 2022-11-21 (v0.1.1) message in INTERNAL if no movie(s) found on device
 # 2022-11-21 (v0.1.2) warning messages if no movies found and cmd 'on' sent
+# 2022-11-22 (v0.1.3) ability to use ct colorpicker by RGBW devices (set <name> ct 2000-6500)
 #
 ###############################################################################
 
@@ -45,7 +46,7 @@ package main;
 use strict;
 use warnings;
 
-my $fversion = "31_Twinkly.pm:0.1.2/2022-11-21";
+my $fversion = "31_Twinkly.pm:0.1.3/2022-11-22";
 my $author  = 'https://forum.fhem.de/index.php?action=profile;u=23907';
 
 sub Twinkly_Initialize($) {
@@ -130,7 +131,7 @@ sub Define($$) {
     my ( $hash, $def ) = @_;
     my @a = split( "[ \t][ \t]*", $def );
 
-    return "too few parameters: define <name> Twinkly <IP>" if ( @a != 3 );
+    return "too few parameters: define <name> Twinkly <IP / Hostname>" if ( @a != 3 );
     return "Cannot define Twinkly device. Perl modul ${missingModul} is missing." if ($missingModul);
 
     my $name = $a[0];
@@ -149,14 +150,8 @@ sub Define($$) {
 	
     # Room automatisch setzem
     CommandAttr( undef, $name . ' room Twinkly' ) if ( AttrVal( $name, 'room', 'none' ) eq 'none' );
-  
-    # devStateIcon setzen f¸r Anzeige
-    # CommandAttr( undef, $name . ' devStateIcon online:10px-kreis-gruen offline:10px-kreis-rot' ) if ( AttrVal( $name, 'devStateIcon', 'none' ) eq 'none' );
-  
-    # webCmd setzen f¸r Anzeige
-    #CommandAttr( undef, $name . ' webCmd aww:brightness:hue:on:off' ) if ( AttrVal( $name, 'webCmd', 'none' ) eq 'none' );
-  
-    Log3 $name, 3, "Twinkly ($name) - defined with IP $hash->{IP}";
+	
+	Log3 $name, 3, "Twinkly ($name) - defined with IP $hash->{IP}";
     getToken($hash);
     $modules{Twinkly}{defptr}{ $hash->{IP} } = $hash;
     Twinkly_PerformHttpRequest($hash,'GET','/xled/v1/gestalt','');
@@ -240,9 +235,9 @@ sub Attr(@) {
       CommandAttr( undef, $name . ' icon hue_room_nursery' ) if ( AttrVal( $name, 'icon', 'none' ) eq 'none' and $attrVal =~ /Spritzer/);
       CommandAttr( undef, $name . ' icon hue_filled_lightstrip' ) if ( AttrVal( $name, 'icon', 'none' ) eq 'none' and $attrVal =~ /(String|Line)/);
       CommandAttr( undef, $name . ' icon light_fairy_lights' ) if ( AttrVal( $name, 'icon', 'none' ) eq 'none' and $attrVal =~ /(Cluster|Festoon)/);
-	  # webCmd setzen f¸r Frontend, falls Model angegeben / ermittelt wurde
+	  # webCmd setzen für Frontend, falls Model angegeben / ermittelt wurde
 	  CommandAttr( undef, $name . ' webCmd brightness:hue:on:off' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' and $attrVal =~ /(RGB|Spritzer|LightTree)/ );
-	  CommandAttr( undef, $name . ' webCmd brightness:aww:on:off' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' and $attrVal =~ /AWW/);
+	  CommandAttr( undef, $name . ' webCmd brightness:ct:on:off' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' and $attrVal =~ /AWW/);
     }
     Log3 $name, 5, "Attr ($name) Attr - attrName -> $attrName - attrVal -> $attrVal - cmd -> $cmd - Komme ich hier hin? 1.0";
   return undef;
@@ -372,13 +367,13 @@ sub Set($$@) {
       return;
     }
 	# Convert CT Farbtemperatur in RGB
-	elsif ( $cmd eq "aww" ) {
+	elsif ( $cmd eq "ct" ) {
       return "usage: devicename <name> - cmd -> $cmd - value -> " .$args[0] ." - args -> @args" if ( @args < 1 );
       if (ReadingsVal($name, 'mode','') ne 'color') {
         Twinkly_PerformHttpRequest($hash,'POST','/xled/v1/led/mode','color');
       }
-      my $aww = $args[0];
-	  my ($r,$g,$b) = Color::ct2rgb($aww);
+      my $ct = $args[0];
+	  my ($r,$g,$b) = Color::ct2rgb($ct);
 	  $r = int($r);
 	  $g = int($g);
 	  $b = int($b);
@@ -388,7 +383,7 @@ sub Set($$@) {
     readingsSingleUpdate( $hash, 'red', $r, 1 );
 	  readingsSingleUpdate( $hash, 'green', $g, 1 );
 	  readingsSingleUpdate( $hash, 'blue', $b, 1 );
-	  readingsSingleUpdate( $hash, 'aww', $aww, 1 );
+	  readingsSingleUpdate( $hash, 'ct', $ct, 1 );
       readingsSingleUpdate( $hash, 'mode', 'color', 1 );
       Log3 $name, 4, "checkToken ($name) Set - with POST und Token: " .$hash->{TOKEN};
       return;
@@ -459,7 +454,7 @@ sub Set($$@) {
     else {
       my $list = "";
       $list .= "hue:colorpicker,HUE,0,1,360" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' or AttrVal( $name, 'model', 'none' ) !~ /(RGB|Spritzer|LightTree)/);
-      $list .= " aww:colorpicker,CT,2000,10,6500" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' or AttrVal( $name, 'model', 'none' ) !~ /(AWW)/);
+      $list .= " ct:colorpicker,CT,2000,10,6500" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' or AttrVal( $name, 'model', 'none' ) !~ /(AWW|RGBW)/);
 	  $list .= " brightness:slider,0,1,100" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' );
 	  $list .= " saturation:slider,0,1,100" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' );
       $list .= " mode:off,color,demo,effect,movie,playlist,rt" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' );
@@ -597,7 +592,7 @@ sub getMovies($) {
   
   for (my $i = 0; $i <= 15 ; $i++) {
     # Falls im Namen ein seperator (,) vorkommt, muss dieser ersetzt werden,
-    # da ansonsten die Trennung für den Set-Befehl nicht korrekt ausschaut
+    # da ansonsten die Trennung fŸr den Set-Befehl nicht korrekt ausschaut
     if ($z == 1) {
       $movie  = ReadingsVal($device,'movies_' .$z .'_name','Undef');
       $movie  =~ s/,//g;
@@ -687,7 +682,7 @@ sub Twinkly_PerformHttpRequest($$$$) {
 					timeout    => 10,
 					hash       => $hash,   	# Muss gesetzt werden, damit die Callback funktion wieder $hash hat
 					method     => $method, 	# Lesen von Inhalten
-					header     => $header, 	# Den Header gem‰ﬂ abzufragender Daten ‰ndern
+					header     => $header, 	# Den Header gemäß abzufragender Daten ändern
 					data	   => $data,
 					callback   => \&Twinkly_ParseHttpResponse
 					# Diese Funktion soll das Ergebnis dieser HTTP Anfrage bearbeiten
@@ -703,11 +698,11 @@ sub Twinkly_ParseHttpResponse($) {
 	my $device = $hash->{NAME};
 	# wenn ein Fehler bei der HTTP Abfrage aufgetreten ist wie z.B. Timeout, weil IP nicht erreichbar ist
 	if($err ne "") {
-		Log3 $name, 3, "error while requesting ".$param->{url}." - $err"; # Eintrag fürs Log
-		readingsSingleUpdate( $hash, "fullResponse", "ERROR", 1 );
+		Log3 $name, 3, "error while requesting ".$param->{url}." - $err - Data -> $data"; # Eintrag fŸrs Log
+		readingsSingleUpdate( $hash, "fullResponse", "$err", 1 );
 		$hash->{NETWORK_STATE} = 'offline';
 	}
-	# wenn die Abfrage erfolgreich war ($data enthält die Ergebnisdaten des HTTP Aufrufes)
+	# wenn die Abfrage erfolgreich war ($data enthŠlt die Ergebnisdaten des HTTP Aufrufes)
 	elsif($data ne "") {
 		$hash->{NETWORK_STATE} = 'online';
 		if (ReadingsVal($name,'mode','') =~ /(color|demo|effect|movie|playlist|rt)/) {
@@ -763,26 +758,21 @@ sub parseJson($$$) {
 	my $code  = $decoded->{"code"};
 	$hash->{CODE}  = $code;
   
-	#if ($hash->{url} =~ /login/) {
 	if ($url =~ /login/) {
 		$hash->{TOKEN} = $decoded->{"authentication_token"};
 	}
-	#if ($hash->{url} =~ /brightness/) {
 	if ($url =~ /brightness/) {
 		my $brightness = $decoded->{"value"};
 		readingsSingleUpdate( $hash, "brightness", $brightness, 1 );
 	}
-	#if ($hash->{url} =~ /saturation/) {
 	if ($url =~ /saturation/) {
 		my $saturation = $decoded->{"value"};
 		readingsSingleUpdate( $hash, "saturation", $saturation, 1 );
 	}
-	#if ($hash->{url} =~ /device_name/) {
 	if ($url =~ /device_name/) {
 		my $device_name = $decoded->{"name"};
 		readingsSingleUpdate( $hash, "device_name", $device_name, 1 );
 	}
-	#if ($hash->{url} =~ /color/) {
 	if ($url =~ /color/) {
 		# Example response
 		# {"hue":56,"saturation":105,"value":255,"red":255,"green":248,"blue":150,"code":1000}
@@ -837,7 +827,7 @@ sub parseJson($$$) {
 =pod
 =item device
 =item summary       Modul to control Twinkly devices like Strings, Cluster or Spritzer
-=item summary_DE    Modul Twinkly Geräte zu steuern (Mode/Color/Helligkeit/...)
+=item summary_DE    Modul Twinkly GerŠte zu steuern (Mode/Color/Helligkeit/...)
 
 =begin html
 
@@ -854,11 +844,12 @@ sub parseJson($$$) {
   <a name="Twinklydefine"></a>
   <b>Define</b>
   <ul><br>
-    <code>define &lt;name&gt; Twinkly &lt;IP-Adresse&gt;</code>
+    <code>define &lt;name&gt; Twinkly &lt;IP-Adresse / Hostname&gt;</code>
     <br><br>
     Example:
     <ul><br>
       <code>define Weihnachtskaktus Twinkly 192.168.178.100</code><br>
+	  <code>define Weihnachtskaktus Twinkly Weihnachtskaktus.fritz.box</code><br>
     </ul>
   </ul>
   <br><br>
@@ -923,7 +914,7 @@ sub parseJson($$$) {
   <a name="Twinklydefine"></a>
   <b>Define</b>
   <ul><br />
-    <code>define &lt;name&gt; Twinkly &lt;IP-Adresse&gt;</code>
+    <code>define &lt;name&gt; Twinkly &lt;IP-Adresse / Hostname&gt;</code>
     <br /><br />
     Beispiel:
     <ul><br />
@@ -933,23 +924,23 @@ sub parseJson($$$) {
     xxxxx
   </ul>
   <br /><br />
-  <a name="XiaomiBTLESensreadings"></a>
+  <a name="Twinkly"></a>
   <b>Readings</b>
   <ul>
-    <li>state - Status des BTLE Sensor oder eine Fehlermeldung falls Fehler beim letzten Kontakt auftraten.</li>
+    <li>to do</li>
   </ul>
   <br /><br />
   <a name="Twinklyset"></a>
   <b>Set</b>
   <ul>
-    <li>resetBatteryTimestamp - wenn die Batterie gewechselt wurde</li>
+    <li>to do</li>
     <br />
   </ul>
   <br /><br />
   <a name="TwinklyGet"></a>
   <b>Get</b>
   <ul>
-    <li>sensorData - aktive Abfrage der Sensors Werte</li>
+    <li>to do</li>
     <br />
   </ul>
   <br /><br />
