@@ -51,3 +51,4 @@ SET command:<list>
   
 ATTR command (optional):<list>
   <li>model        - will be set automatically depends on the product_code</li>
+  </list>
