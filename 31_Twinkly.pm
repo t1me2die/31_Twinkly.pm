@@ -341,6 +341,7 @@ sub Set($$@) {
     # Wenn es nur ein Movie gibt, gibt es keinen seperator (,)
     my ($movies) = getMovies($hash);
     if ($movies ne 'undef') {
+      $hash->{message} = '' if ($hash->{message} =~ /No movies found/);
       my $pos = index($movies,',');
       if ($pos > 0) {
         @movies = split(',',$movies);
@@ -411,6 +412,7 @@ sub Set($$@) {
       return "usage: off" if ( @args != 0 );
       Twinkly_PerformHttpRequest($hash,'POST','/xled/v1/led/mode','off');
       readingsSingleUpdate( $hash, 'state', 'off', 1 );
+      readingsSingleUpdate( $hash, 'mode', 'off', 1 );
       return;
     }
     elsif ( $cmd eq 'on' ) {
@@ -698,7 +700,7 @@ sub Twinkly_ParseHttpResponse($) {
 	my $device = $hash->{NAME};
 	# wenn ein Fehler bei der HTTP Abfrage aufgetreten ist wie z.B. Timeout, weil IP nicht erreichbar ist
 	if($err ne "") {
-		Log3 $name, 3, "error while requesting ".$param->{url}." - $err - Data -> $data"; # Eintrag fŸrs Log
+		Log3 $name, 3, "error while requesting ".$param->{url}." - $err - Data -> $data"; # Eintrag fürs Log
 		readingsSingleUpdate( $hash, "fullResponse", "$err", 1 );
 		$hash->{NETWORK_STATE} = 'offline';
 	}
