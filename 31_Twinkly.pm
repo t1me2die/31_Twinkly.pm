@@ -38,6 +38,7 @@
 # 2022-11-21 (v0.1.1) message in INTERNAL if no movie(s) found on device
 # 2022-11-21 (v0.1.2) warning messages if no movies found and cmd 'on' sent
 # 2022-11-22 (v0.1.3) ability to use ct colorpicker by RGBW devices (set <name> ct 2000-6500)
+# 2022-11-26 (v0.1.4) added error messages for set commands
 #
 ###############################################################################
 
@@ -46,7 +47,7 @@ package main;
 use strict;
 use warnings;
 
-my $fversion = "31_Twinkly.pm:0.1.3/2022-11-22";
+my $fversion = "31_Twinkly.pm:0.1.4/2022-11-26";
 my $author  = 'https://forum.fhem.de/index.php?action=profile;u=23907';
 
 sub Twinkly_Initialize($) {
@@ -357,10 +358,11 @@ sub Set($$@) {
   
     if ( $cmd eq "hue" ) {
       return "usage: devicename <name> - cmd -> $cmd - value -> " .$args[0] ." - args -> @args" if ( @args < 1 );
+      my $hue = $args[0];
+      return "Hue value is out of range (0...360)" if ($hue < 0 or $hue > 360);
       if (ReadingsVal($name, 'mode','') ne 'color') {
         Twinkly_PerformHttpRequest($hash,'POST','/xled/v1/led/mode','color');
       }
-      my $hue = $args[0];
       Twinkly_PerformHttpRequest($hash,'POST','/xled/v1/led/color',$hue);
       readingsSingleUpdate( $hash, 'hue', $hue, 1 );
       readingsSingleUpdate( $hash, 'mode', 'color', 1 );
@@ -369,11 +371,13 @@ sub Set($$@) {
     }
 	# Convert CT Farbtemperatur in RGB
 	elsif ( $cmd eq "ct" ) {
-      return "usage: devicename <name> - cmd -> $cmd - value -> " .$args[0] ." - args -> @args" if ( @args < 1 );
+    my $ct = $args[0];
+    return "usage: devicename <name> - cmd -> $cmd - value -> " .$args[0] ." - args -> @args" if ( @args < 1 );
+      return "CT value is out of range (2000...6500)" if ($ct < 2000 or $ct > 6500);
       if (ReadingsVal($name, 'mode','') ne 'color') {
         Twinkly_PerformHttpRequest($hash,'POST','/xled/v1/led/mode','color');
       }
-      my $ct = $args[0];
+      
 	  my ($r,$g,$b) = Color::ct2rgb($ct);
 	  $r = int($r);
 	  $g = int($g);
@@ -392,6 +396,7 @@ sub Set($$@) {
     elsif ( $cmd eq 'brightness' ) {
         return "usage: brightness" if ( @args < 1 );
         my $brightness = $args[0];
+        return "Brightness value is out of range (0...100)" if ($brightness < 0 or $brightness > 100);
         if ($brightness == 0) {
           Twinkly_PerformHttpRequest($hash,'POST','/xled/v1/led/mode','off');
         }
@@ -404,6 +409,7 @@ sub Set($$@) {
     elsif ( $cmd eq 'saturation' ) {
       return "usage: saturation" if ( @args < 1 );
       my $saturation = $args[0];
+      return "Saturation value is out of range (0...100)" if ($saturation < 0 or $saturation > 100);
       Twinkly_PerformHttpRequest($hash,'POST','/xled/v1/led/out/saturation',$saturation);
       readingsSingleUpdate( $hash, 'saturation', $saturation, 1 );
       return;
@@ -424,10 +430,11 @@ sub Set($$@) {
     }
     elsif ( $cmd eq 'effect_id' ) {
       return "usage: effect_id" if ( @args < 1 );
+      my $effect_id = $args[0];
+      return "Effect_id value is out of range (0...4)" if ($effect_id < 0 or $effect_id > 4);
       if (ReadingsVal($name, 'mode','') ne 'effect') {
         Twinkly_PerformHttpRequest($hash,'POST','/xled/v1/led/mode','effect');
       }
-      my $effect_id = $args[0];
       Twinkly_PerformHttpRequest($hash,'POST','/xled/v1/led/effects/current',$effect_id);
       readingsSingleUpdate( $hash, 'effect_id', $effect_id, 1 );
       return;
@@ -435,11 +442,18 @@ sub Set($$@) {
     elsif ( $cmd eq 'mode' ) {
       return "usage: mode" if ( @args < 1 );
       my $mode = $args[0];
+      return "Please select on of the allowed modes 'off,color,demo,effect,movie,playlist,rt'" if ($mode !~ /^(off|color|demo|effect|movie|playlist|rt)$/);
       Twinkly_PerformHttpRequest($hash,'POST','/xled/v1/led/mode',$mode);
       return;
     }
     elsif ( $cmd eq 'movie' ) {
       return "usage: movie" if ( @args < 1 );
+      my $ok = grep { $args[0] =~ /(?i)$_(?-i)/; } @movies;
+      # 0  = kein Matching gefunden
+      # >0 = Matching gefunden -> Treffer
+      if ($ok == 0) {
+        return "The selected movie is not in the list of the movies. Try to 'get <name> movies' first.";
+      }
       if (ReadingsVal($name, 'mode','') ne 'movie') {
         Twinkly_PerformHttpRequest($hash,'POST','/xled/v1/led/mode','movie');
       }
