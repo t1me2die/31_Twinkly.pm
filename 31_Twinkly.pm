@@ -39,6 +39,8 @@
 # 2022-11-21 (v0.1.2) warning messages if no movies found and cmd 'on' sent
 # 2022-11-22 (v0.1.3) ability to use ct colorpicker by RGBW devices (set <name> ct 2000-6500)
 # 2022-11-26 (v0.1.4) added error messages for set commands
+# 2022-11-27 (v0.1.5) 1. call json2reading if $data is not "Invalid Token"
+#                     2. If Token is resettet -> Invalid Token -> call stateRequest to get new Token
 #
 ###############################################################################
 
@@ -47,7 +49,7 @@ package main;
 use strict;
 use warnings;
 
-my $fversion = "31_Twinkly.pm:0.1.4/2022-11-26";
+my $fversion = "31_Twinkly.pm:0.1.5/2022-11-27";
 my $author  = 'https://forum.fhem.de/index.php?action=profile;u=23907';
 
 sub Twinkly_Initialize($) {
@@ -188,6 +190,7 @@ sub Attr(@) {
 
         elsif ( $cmd eq "del" ) {
             Log3 $name, 3, "Twinkly ($name) - enabled";
+            stateRequest($hash);
         }
     }
     elsif ( $attrName eq "disabledForIntervals" ) {
@@ -626,7 +629,7 @@ sub getMovies($) {
     }
     $z +=1;
   }
-  Log3 $device, 4, "getMovies - Movies -> $movies";
+  Log3 $device, 5, "getMovies - Movies -> $movies";
   if ($z > 1) {
     # Leerzeichen im Namen ersetzen, damit die Darstellung funktioniert
     $movies =~ s/ //g;
@@ -731,7 +734,7 @@ sub Twinkly_ParseHttpResponse($) {
 		  readingsSingleUpdate( $hash, 'state', 'progress working - just wait', 1 );
 		}
 		# Brightness, Saturation und color haben "mode" im JSON, dadurch wird das eigentliche Mode Reading "zerstoert"
-		if ($url !~ /(brightness|saturation|color)/) {
+		if ($url !~ /(brightness|saturation|color)/ and $data ne 'Invalid Token') {
 		  json2reading($defs{$device}, $data);
 		  Log3 $name, 4, "Twinkly ($name) - url -> " .$url ." data -> $data";
 		}
@@ -749,8 +752,10 @@ sub Twinkly_ParseHttpResponse($) {
 		}
 		elsif ($ret !~ /OK/ and $hash->{url} =~ /verify/) {
 			# Abfrage vom Token fehlgeschlagen - TOKEN resetten
+      # und erneut einen Token abrufen
 			Log3 $name, 4, "Twinkly ($name) - Abfrage vom Token fehlgeschlagen";
 			$hash->{TOKEN} = '';
+      stateRequest($hash);
 		}
 		elsif ($ret !~ /OK/) {
 			# Abfrage fehlgeschlagen - Error Code ausgeben
