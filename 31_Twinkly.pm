@@ -41,7 +41,11 @@
 # 2022-11-26 (v0.1.4) added error messages for set commands
 # 2022-11-27 (v0.1.5) 1. call json2reading if $data is not "Invalid Token"
 #                     2. If Token is resettet -> Invalid Token -> call stateRequest to get new Token
+# 2022-12-01 (v0.1.6) List of "getMovies" saved with {helper} in devices to save time by the loop
 #
+#
+# To-Do: 
+# Check if the InternalTimer and the NOTIFYDEV correctly work - sometimes I think the modul will be called to often! 
 ###############################################################################
 
 package main;
@@ -49,7 +53,7 @@ package main;
 use strict;
 use warnings;
 
-my $fversion = "31_Twinkly.pm:0.1.5/2022-11-27";
+my $fversion = "31_Twinkly.pm:0.1.6/2022-12-01";
 my $author  = 'https://forum.fhem.de/index.php?action=profile;u=23907';
 
 sub Twinkly_Initialize($) {
@@ -164,14 +168,13 @@ sub Define($$) {
 sub Undef($$) {
 
     my ( $hash, $arg ) = @_;
-
-    my $mac  = $hash->{IP};
+    my $ip  = $hash->{IP};
     my $name = $hash->{NAME};
 
     RemoveInternalTimer($hash);
     BlockingKill( $hash->{helper}{RUNNING_PID} ) if ( defined( $hash->{helper}{RUNNING_PID} ) );
 
-    delete( $modules{Twinkly}{defptr}{$mac} );
+    delete( $modules{Twinkly}{defptr}{$ip} );
     Log3 $name, 3, "Sub Twinkly_Undef ($name) - delete device $name";
     return undef;
 }
@@ -187,7 +190,6 @@ sub Attr(@) {
             readingsSingleUpdate( $hash, "state", "disabled", 1 );
             Log3 $name, 3, "Twinkly ($name) - disabled";
         }
-
         elsif ( $cmd eq "del" ) {
             Log3 $name, 3, "Twinkly ($name) - enabled";
             stateRequest($hash);
@@ -199,7 +201,6 @@ sub Attr(@) {
             Log3 $name, 3, "Twinkly ($name) - disabledForIntervals";
             stateRequest($hash);
         }
-
         elsif ( $cmd eq "del" ) {
             Log3 $name, 3, "Twinkly ($name) - enabled";
             readingsSingleUpdate( $hash, "state", "active", 1 );
@@ -207,7 +208,6 @@ sub Attr(@) {
     }
     elsif ( $attrName eq "interval" ) {
         RemoveInternalTimer($hash);
-
         if ( $cmd eq "set" ) {
             if ( $attrVal < 15 ) {
                 Log3 $name, 3, "Twinkly ($name) - interval too small, please use something >= 15 (sec), default is 60 (sec)";
@@ -218,7 +218,6 @@ sub Attr(@) {
                 Log3 $name, 3, "Twinkly ($name) - set interval to $attrVal";
             }
         }
-
         elsif ( $cmd eq "del" ) {
             $hash->{INTERVAL} = 60;
             Log3 $name, 3, "Twinkly ($name) - set interval to default";
@@ -230,33 +229,39 @@ sub Attr(@) {
             Log3 $name, 3, "Twinkly ($name) - set blockingCallLoglevel to $attrVal";
         }
         elsif ( $cmd eq "del" ) {
-          $hash->{loglevel} = 4;
-          Log3 $name, 3, "Twinkly ($name) - set blockingCallLoglevel to default";
+			$hash->{loglevel} = 4;
+			Log3 $name, 3, "Twinkly ($name) - set blockingCallLoglevel to default";
         }
     }
     elsif ($attrName eq 'model' and $cmd eq 'set') {
-      # Icon automatisch setzen, falls Model angegeben wurde
-      CommandAttr( undef, $name . ' icon hue_room_nursery' ) if ( AttrVal( $name, 'icon', 'none' ) eq 'none' and $attrVal =~ /Spritzer/);
-      CommandAttr( undef, $name . ' icon hue_filled_lightstrip' ) if ( AttrVal( $name, 'icon', 'none' ) eq 'none' and $attrVal =~ /(String|Line)/);
-      CommandAttr( undef, $name . ' icon light_fairy_lights' ) if ( AttrVal( $name, 'icon', 'none' ) eq 'none' and $attrVal =~ /(Cluster|Festoon)/);
-	  # webCmd setzen für Frontend, falls Model angegeben / ermittelt wurde
-	  CommandAttr( undef, $name . ' webCmd brightness:hue:on:off' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' and $attrVal =~ /(RGB|Spritzer|LightTree)/ );
-	  CommandAttr( undef, $name . ' webCmd brightness:ct:on:off' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' and $attrVal =~ /AWW/);
+		# Icon automatisch setzen, falls Model angegeben wurde
+		CommandAttr( undef, $name . ' icon hue_room_nursery' ) if ( AttrVal( $name, 'icon', 'none' ) eq 'none' and $attrVal =~ /Spritzer/);
+		CommandAttr( undef, $name . ' icon hue_filled_lightstrip' ) if ( AttrVal( $name, 'icon', 'none' ) eq 'none' and $attrVal =~ /(String|Line)/);
+		CommandAttr( undef, $name . ' icon light_fairy_lights' ) if ( AttrVal( $name, 'icon', 'none' ) eq 'none' and $attrVal =~ /(Cluster|Festoon)/);
+		# webCmd setzen fÃ¼r Frontend, falls Model angegeben / ermittelt wurde
+		CommandAttr( undef, $name . ' webCmd brightness:hue:on:off' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' and $attrVal =~ /(RGB|Spritzer|LightTree)/ );
+		CommandAttr( undef, $name . ' webCmd brightness:ct:on:off' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' and $attrVal =~ /AWW/);
     }
     Log3 $name, 5, "Attr ($name) Attr - attrName -> $attrName - attrVal -> $attrVal - cmd -> $cmd - Komme ich hier hin? 1.0";
-  return undef;
+	return undef;
 }
 
 sub Notify($$) {
-
-    my ( $hash, $dev ) = @_;
+	my ( $hash, $dev ) = @_;
     my $name = $hash->{NAME};
-    return stateRequestTimer($hash) if ( IsDisabled($name) );
+	# Mir ist nicht ganz klar, warum ich bei sämtlichen Notifys, obwohl das Geraet disabled ist trotzdem eine stateRequestTimer aufrufen moechte
+    if ( IsDisabled($name) ) {
+		Log3 $name, 5, "Twinkly Notify ($name) - Komme ich hier rein? hash -> $hash - dev -> $dev (" .$dev->{NAME} .")";
+		#return stateRequestTimer($hash);
+		return;
+	}
 
     my $devname = $dev->{NAME};
     my $devtype = $dev->{TYPE};
     my $events  = deviceEvents( $dev, 1 );
     return if ( !$events );
+
+	Log3 $name, 3, "Twinkly Notify ($name) - Anfang - events -> $events - devtype -> $devtype - ";
 
     stateRequestTimer($hash)
       if (
@@ -298,24 +303,24 @@ sub Notify($$) {
 }
 
 sub stateRequest($) {
-
     my ($hash) = @_;
     my $name = $hash->{NAME};
     my %readings;
 
+	Log3 $name, 3, "Twinkly ($name) - stateRequest: name -> $name - Token -> ' " .$hash->{TOKEN} ." '";
     if ( AttrVal( $name, 'model', 'none' ) eq 'none' ) {
         checkModel($hash);
     }
     if ( !IsDisabled($name) ) {
-      if ($hash->{TOKEN} eq '') {
-        getToken($hash);
-      }
-      else {
-        checkToken($hash);
-      }
+		if ($hash->{TOKEN} eq '') {
+			getToken($hash);
+		}
+		else {
+			checkToken($hash);
+		}
     }
     else {
-      readingsSingleUpdate( $hash, "state", "disabled", 1 );
+		readingsSingleUpdate( $hash, "state", "disabled", 1 );
     }
 }
 
@@ -324,6 +329,7 @@ sub stateRequestTimer($) {
     my ($hash) = @_;
     my $name = $hash->{NAME};
 
+	Log3 $name, 3, "Twinkly stateRequestTimer ($name) - Anfang: name -> $name - hash -> $hash";
     RemoveInternalTimer($hash);
     stateRequest($hash);
 
@@ -333,198 +339,192 @@ sub stateRequestTimer($) {
 }
 
 sub Set($$@) {
-
     my ( $hash, $name, @aa ) = @_;
     my ( $cmd, @args ) = @aa;
 
     my $mod;
     my $handle;
     my @movies;
+    my $movies = $hash->{helper}{listMovies};
+    my $network = $hash->{NETWORK_STATE};
     
-    # Vorhandene Movies ermitteln und aufbereiten für den Set-Befehl
+	# Vorhandene Movies ermitteln und aufbereiten fÃ¼r den Set-Befehl
     # Wenn es nur ein Movie gibt, gibt es keinen seperator (,)
-    my ($movies) = getMovies($hash);
-    if ($movies ne 'undef') {
-      $hash->{message} = '' if ($hash->{message} =~ /No movies found/);
-      my $pos = index($movies,',');
-      if ($pos > 0) {
-        @movies = split(',',$movies);
-      }
-      elsif ($pos == 0) {
-        @movies = $movies;
-      }
+    if ($movies ne '') {
+		my $pos = index($movies,',');
+		if ($pos > 0) {
+			@movies = split(',',$movies);
+		}
+		elsif ($pos == 0) {
+			@movies = $movies;
+		}
     }
-    # Keine Movies geuploaded, bitte zuerst Movies hochladen via Twinkly App und speichern
-    elsif ($movies eq 'undef') {
-      $hash->{message} = 'No movies found. Upload first via Twinkly App.';
-    }
-  
+
     if ( $cmd eq "hue" ) {
-      return "usage: devicename <name> - cmd -> $cmd - value -> " .$args[0] ." - args -> @args" if ( @args < 1 );
-      my $hue = $args[0];
-      return "Hue value is out of range (0...360)" if ($hue < 0 or $hue > 360);
-      if (ReadingsVal($name, 'mode','') ne 'color') {
-        Twinkly_PerformHttpRequest($hash,'POST','/xled/v1/led/mode','color');
-      }
-      Twinkly_PerformHttpRequest($hash,'POST','/xled/v1/led/color',$hue);
-      readingsSingleUpdate( $hash, 'hue', $hue, 1 );
-      readingsSingleUpdate( $hash, 'mode', 'color', 1 );
-      Log3 $name, 4, "checkToken ($name) Set - with POST und Token: " .$hash->{TOKEN};
-      return;
+		return "usage: devicename <name> - cmd -> $cmd - value -> " .$args[0] ." - args -> @args" if ( @args < 1 );
+		my $hue = $args[0];
+		return "Hue value is out of range (0...360)" if ($hue < 0 or $hue > 360);
+		if (ReadingsVal($name, 'mode','') ne 'color') {
+			Twinkly_PerformHttpRequest($hash,'POST','/xled/v1/led/mode','color');
+		}
+		Twinkly_PerformHttpRequest($hash,'POST','/xled/v1/led/color',$hue);
+		readingsSingleUpdate( $hash, 'hue', $hue, 1 );
+		readingsSingleUpdate( $hash, 'mode', 'color', 1 );
+		Log3 $name, 4, "checkToken ($name) Set - with POST und Token: " .$hash->{TOKEN};
+		return;
     }
 	# Convert CT Farbtemperatur in RGB
 	elsif ( $cmd eq "ct" ) {
-    my $ct = $args[0];
-    return "usage: devicename <name> - cmd -> $cmd - value -> " .$args[0] ." - args -> @args" if ( @args < 1 );
-      return "CT value is out of range (2000...6500)" if ($ct < 2000 or $ct > 6500);
-      if (ReadingsVal($name, 'mode','') ne 'color') {
-        Twinkly_PerformHttpRequest($hash,'POST','/xled/v1/led/mode','color');
-      }
+		my $ct = $args[0];
+		return "usage: devicename <name> - cmd -> $cmd - value -> " .$args[0] ." - args -> @args" if ( @args < 1 );
+		return "CT value is out of range (2000...6500)" if ($ct < 2000 or $ct > 6500);
+		if (ReadingsVal($name, 'mode','') ne 'color') {
+			Twinkly_PerformHttpRequest($hash,'POST','/xled/v1/led/mode','color');
+		}
       
-	  my ($r,$g,$b) = Color::ct2rgb($ct);
-	  $r = int($r);
-	  $g = int($g);
-	  $b = int($b);
-	  my $rgb = '{"red":' .$r .',"green":' .$g .',"blue":' .$b .'}';
-    Log3 $name, 4, " ($name) Set - with POST und Token: " .$hash->{TOKEN} ." - rgb -> $rgb ";
-	  Twinkly_PerformHttpRequest($hash,'POST','/xled/v1/led/color',$rgb);
-    readingsSingleUpdate( $hash, 'red', $r, 1 );
-	  readingsSingleUpdate( $hash, 'green', $g, 1 );
-	  readingsSingleUpdate( $hash, 'blue', $b, 1 );
-	  readingsSingleUpdate( $hash, 'ct', $ct, 1 );
-      readingsSingleUpdate( $hash, 'mode', 'color', 1 );
-      Log3 $name, 4, "checkToken ($name) Set - with POST und Token: " .$hash->{TOKEN};
-      return;
+		my ($r,$g,$b) = Color::ct2rgb($ct);
+		$r = int($r);
+		$g = int($g);
+		$b = int($b);
+		my $rgb = '{"red":' .$r .',"green":' .$g .',"blue":' .$b .'}';
+		Log3 $name, 4, " ($name) Set - with POST und Token: " .$hash->{TOKEN} ." - rgb -> $rgb ";
+		Twinkly_PerformHttpRequest($hash,'POST','/xled/v1/led/color',$rgb);
+		readingsSingleUpdate( $hash, 'red', $r, 1 );
+		readingsSingleUpdate( $hash, 'green', $g, 1 );
+		readingsSingleUpdate( $hash, 'blue', $b, 1 );
+		readingsSingleUpdate( $hash, 'ct', $ct, 1 );
+		readingsSingleUpdate( $hash, 'mode', 'color', 1 );
+		Log3 $name, 4, "checkToken ($name) Set - with POST und Token: " .$hash->{TOKEN};
+		return;
     }
     elsif ( $cmd eq 'brightness' ) {
         return "usage: brightness" if ( @args < 1 );
         my $brightness = $args[0];
         return "Brightness value is out of range (0...100)" if ($brightness < 0 or $brightness > 100);
         if ($brightness == 0) {
-          Twinkly_PerformHttpRequest($hash,'POST','/xled/v1/led/mode','off');
+			Twinkly_PerformHttpRequest($hash,'POST','/xled/v1/led/mode','off');
         }
         elsif ($brightness > 0) {
-          Twinkly_PerformHttpRequest($hash,'POST','/xled/v1/led/out/brightness',$brightness);
-          readingsSingleUpdate( $hash, 'brightness', $brightness, 1 );
+			Twinkly_PerformHttpRequest($hash,'POST','/xled/v1/led/out/brightness',$brightness);
+			readingsSingleUpdate( $hash, 'brightness', $brightness, 1 );
         }
         return;
     }
     elsif ( $cmd eq 'saturation' ) {
-      return "usage: saturation" if ( @args < 1 );
-      my $saturation = $args[0];
-      return "Saturation value is out of range (0...100)" if ($saturation < 0 or $saturation > 100);
-      Twinkly_PerformHttpRequest($hash,'POST','/xled/v1/led/out/saturation',$saturation);
-      readingsSingleUpdate( $hash, 'saturation', $saturation, 1 );
-      return;
+		return "usage: saturation" if ( @args < 1 );
+		my $saturation = $args[0];
+		return "Saturation value is out of range (0...100)" if ($saturation < 0 or $saturation > 100);
+		Twinkly_PerformHttpRequest($hash,'POST','/xled/v1/led/out/saturation',$saturation);
+		readingsSingleUpdate( $hash, 'saturation', $saturation, 1 );
+		return;
     }
     elsif ( $cmd eq 'off' ) {
-      return "usage: off" if ( @args != 0 );
-      Twinkly_PerformHttpRequest($hash,'POST','/xled/v1/led/mode','off');
-      readingsSingleUpdate( $hash, 'state', 'off', 1 );
-      readingsSingleUpdate( $hash, 'mode', 'off', 1 );
-      return;
+		return "usage: off" if ( @args != 0 );
+		Twinkly_PerformHttpRequest($hash,'POST','/xled/v1/led/mode','off');
+		readingsSingleUpdate( $hash, 'state', 'off', 1 );
+		readingsSingleUpdate( $hash, 'mode', 'off', 1 );
+		return;
     }
     elsif ( $cmd eq 'on' ) {
-      return "usage: on" if ( @args != 0 );
-      Log3 $name, 2, "set-Befehl ON - Warning, no Movies found in the Readings. Please use 'get <name> Movies' first. Maybe no movies uploaded / saved via Twinkly App yet?" if ($movies eq 'undef');
-      Twinkly_PerformHttpRequest($hash,'POST','/xled/v1/led/mode','movie');
-      readingsSingleUpdate( $hash, 'state', 'on', 1 );
-      return;
+		return "usage: on" if ( @args != 0 );
+		Log3 $name, 2, "set-Befehl ON - Warning, no Movies found in the Readings. Please use 'get <name> Movies' first. Maybe no movies uploaded / saved via Twinkly App yet?" if ($movies eq 'undef');
+		Twinkly_PerformHttpRequest($hash,'POST','/xled/v1/led/mode','movie');
+		readingsSingleUpdate( $hash, 'state', 'on', 1 );
+		return;
     }
     elsif ( $cmd eq 'effect_id' ) {
-      return "usage: effect_id" if ( @args < 1 );
-      my $effect_id = $args[0];
-      return "Effect_id value is out of range (0...4)" if ($effect_id < 0 or $effect_id > 4);
-      if (ReadingsVal($name, 'mode','') ne 'effect') {
-        Twinkly_PerformHttpRequest($hash,'POST','/xled/v1/led/mode','effect');
-      }
-      Twinkly_PerformHttpRequest($hash,'POST','/xled/v1/led/effects/current',$effect_id);
-      readingsSingleUpdate( $hash, 'effect_id', $effect_id, 1 );
-      return;
+		return "usage: effect_id" if ( @args < 1 );
+		my $effect_id = $args[0];
+		return "Effect_id value is out of range (0...4)" if ($effect_id < 0 or $effect_id > 4);
+		if (ReadingsVal($name, 'mode','') ne 'effect') {
+			Twinkly_PerformHttpRequest($hash,'POST','/xled/v1/led/mode','effect');
+		}
+		Twinkly_PerformHttpRequest($hash,'POST','/xled/v1/led/effects/current',$effect_id);
+		readingsSingleUpdate( $hash, 'effect_id', $effect_id, 1 );
+		return;
     }
     elsif ( $cmd eq 'mode' ) {
-      return "usage: mode" if ( @args < 1 );
-      my $mode = $args[0];
-      return "Please select on of the allowed modes 'off,color,demo,effect,movie,playlist,rt'" if ($mode !~ /^(off|color|demo|effect|movie|playlist|rt)$/);
-      Twinkly_PerformHttpRequest($hash,'POST','/xled/v1/led/mode',$mode);
-      return;
+		return "usage: mode" if ( @args < 1 );
+		my $mode = $args[0];
+		return "Please select on of the allowed modes 'off,color,demo,effect,movie,playlist,rt'" if ($mode !~ /^(off|color|demo|effect|movie|playlist|rt)$/);
+		Twinkly_PerformHttpRequest($hash,'POST','/xled/v1/led/mode',$mode);
+		return;
     }
     elsif ( $cmd eq 'movie' ) {
-      return "usage: movie" if ( @args < 1 );
-      my $ok = grep { $args[0] =~ /(?i)$_(?-i)/; } @movies;
-      # 0  = kein Matching gefunden
-      # >0 = Matching gefunden -> Treffer
-      if ($ok == 0) {
-        return "The selected movie is not in the list of the movies. Try to 'get <name> movies' first.";
-      }
-      if (ReadingsVal($name, 'mode','') ne 'movie') {
-        Twinkly_PerformHttpRequest($hash,'POST','/xled/v1/led/mode','movie');
-      }
-      # Für den POST benötigt man die ID von dem jeweiligen Movie, daher muss 
-      # mit dem Namen ins Array den jeweiligen Index raussuchen um den POST
-      # Befehl abzusetzen
-      my $movie = $args[0];
-      my $idx = firstidx { $_ eq $movie } @movies;
-      #Log3 $name, 0, "set-Befehl - Movie -> $movie - Index -> $idx";
-      Twinkly_PerformHttpRequest($hash,'POST','/xled/v1/movies/current',$idx);
-      readingsSingleUpdate( $hash, 'movie', $movie, 1 );
-      return;
+		return "usage: movie" if ( @args < 1 );
+		my $ok = grep { $args[0] =~ /(?i)$_(?-i)/; } @movies;
+		# 0  = kein Matching gefunden
+		# >0 = Matching gefunden -> Treffer
+		if ($ok == 0) {
+			return "The selected movie is not in the list of the movies. Try to 'get <name> movies' first.";
+		}
+		if (ReadingsVal($name, 'mode','') ne 'movie') {
+			Twinkly_PerformHttpRequest($hash,'POST','/xled/v1/led/mode','movie');
+		}
+		# Fuer den POST benoetigt man die ID von dem jeweiligen Movie, daher muss 
+		# mit dem Namen ins Array den jeweiligen Index raussuchen um den POST
+		# Befehl abzusetzen
+		my $movie = $args[0];
+		my $idx = firstidx { $_ eq $movie } @movies;
+		#Log3 $name, 0, "set-Befehl - Movie -> $movie - Index -> $idx";
+		Twinkly_PerformHttpRequest($hash,'POST','/xled/v1/movies/current',$idx);
+		readingsSingleUpdate( $hash, 'movie', $movie, 1 );
+		return;
     }
     else {
-      my $list = "";
-      $list .= "hue:colorpicker,HUE,0,1,360" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' or AttrVal( $name, 'model', 'none' ) !~ /(RGB|Spritzer|LightTree)/);
-      $list .= " ct:colorpicker,CT,2000,10,6500" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' or AttrVal( $name, 'model', 'none' ) !~ /(AWW|RGBW)/);
-	  $list .= " brightness:slider,0,1,100" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' );
-	  $list .= " saturation:slider,0,1,100" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' );
-      $list .= " mode:off,color,demo,effect,movie,playlist,rt" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' );
-      $list .= " movie:$movies" unless ( $movies eq 'undef' );
-      $list .= " on:noArg" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' );
-      $list .= " off:noArg" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' );
-      $list .= " effect_id:0,1,2,3,4" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' );
-      return "Unknown argument $cmd, choose one of $list";
+		my $list = "";
+		$list .= "hue:colorpicker,HUE,0,1,360" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' or AttrVal( $name, 'model', 'none' ) !~ /(RGB|Spritzer|LightTree)/);
+		$list .= " ct:colorpicker,CT,2000,10,6500" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' or AttrVal( $name, 'model', 'none' ) !~ /(AWW|RGBW)/);
+		$list .= " brightness:slider,0,1,100" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+		$list .= " saturation:slider,0,1,100" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+		$list .= " mode:off,color,demo,effect,movie,playlist,rt" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+		$list .= " movie:$movies" unless ( $movies eq '' );
+		$list .= " on:noArg" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+		$list .= " off:noArg" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+		$list .= " effect_id:0,1,2,3,4" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+		return "Unknown argument $cmd, choose one of $list";
     }
     return undef;
 }
 
 sub Get($$@) {
-
     my ( $hash, $name, @aa ) = @_;
     my ( $cmd, @args ) = @aa;
 
     if ( $cmd eq 'Token' ) {
-      checkToken($hash);
+		checkToken($hash);
     }
     elsif ( $cmd eq 'Gestalt' ) {
-      Twinkly_PerformHttpRequest($hash,'GET','/xled/v1/gestalt','');
+		Twinkly_PerformHttpRequest($hash,'GET','/xled/v1/gestalt','');
     }
     elsif ( $cmd eq 'Mode' ) {
-      Twinkly_PerformHttpRequest($hash,'GET','/xled/v1/led/mode','');
+		Twinkly_PerformHttpRequest($hash,'GET','/xled/v1/led/mode','');
     }
     elsif ( $cmd eq 'Movies' ) {
-      Twinkly_PerformHttpRequest($hash,'GET','/xled/v1/movies','');
-	  $hash->{message} = '';
+		Twinkly_PerformHttpRequest($hash,'GET','/xled/v1/movies','');
+		$hash->{message} = '';
+		$hash->{helper}{listMoviesDone} = '';
     }
     elsif ( $cmd eq 'Name' ) {
-      Twinkly_PerformHttpRequest($hash,'GET','/xled/v1/device_name','');
+		Twinkly_PerformHttpRequest($hash,'GET','/xled/v1/device_name','');
     }
     elsif ( $cmd eq 'Network' ) {
-      Twinkly_PerformHttpRequest($hash,'GET','/xled/v1/network/status','');
+		Twinkly_PerformHttpRequest($hash,'GET','/xled/v1/network/status','');
     }
     else {
-      my $list = "";
-      $list .= " Gestalt:noArg Gestalt:noArg" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' );
-      $list .= " Mode:noArg Mode:noArg" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' );
-      $list .= " Movies:noArg Movies:noArg" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' );
-      $list .= " Network:noArg Network:noArg" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' );
-      $list .= " Token:noArg Token:noArg" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' );
-      $list .= " Name:noArg Name:noArg" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' );
-      return "Unknown argument $cmd, choose one of $list";
+		my $list = "";
+		$list .= " Gestalt:noArg Gestalt:noArg" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+		$list .= " Mode:noArg Mode:noArg" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+		$list .= " Movies:noArg Movies:noArg" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+		$list .= " Network:noArg Network:noArg" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+		$list .= " Token:noArg Token:noArg" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+		$list .= " Name:noArg Name:noArg" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+		return "Unknown argument $cmd, choose one of $list";
     }
     return undef;
 }
 
 sub getToken($) {
-
     my ( $hash ) = @_;
     my $name = $hash->{NAME};
     my $mac  = $hash->{IP};
@@ -532,15 +532,15 @@ sub getToken($) {
 }
 
 sub checkToken($) {
-
     my ( $hash ) = @_;
     my $name = $hash->{NAME};
     my $ip  = $hash->{IP};
-    if ($hash->{TOKEN} eq '') {
-      getToken($hash);
+    Log3 $name, 4, "checkToken ($name) IP -> $ip - Anfang: Token: " .$hash->{TOKEN};
+	if ($hash->{TOKEN} eq '') {
+		getToken($hash);
     }
     else  {
-      Twinkly_PerformHttpRequest($hash,'POST','/xled/v1/verify','');
+		Twinkly_PerformHttpRequest($hash,'POST','/xled/v1/verify','');
     }
     Log3 $name, 4, "checkToken ($name) IP -> $ip - Run Twinkly_PerformHttpRequest with POST, /xled/v1/verify und Token: " .$hash->{TOKEN};
 }
@@ -550,94 +550,97 @@ sub checkModel($) {
     my $name = $hash->{NAME};
     # Spritzer
     if (ReadingsVal($name,'product_code','') =~ /B200/) {
-      CommandAttr( undef, $name . ' model Spritzer' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+		CommandAttr( undef, $name . ' model Spritzer' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
     }
     # Festoon RGB
     elsif (ReadingsVal($name,'product_code','') =~ /(F020|F040)/ and ReadingsVal($name,'led_profile','') eq 'RGB') {
-      CommandAttr( undef, $name . ' model FestoonRGB' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+		CommandAttr( undef, $name . ' model FestoonRGB' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
     }
     # Festoon AWW
     elsif (ReadingsVal($name,'product_code','') =~ /(F020|F040)/ and ReadingsVal($name,'led_profile','') eq 'AWW') {
-      CommandAttr( undef, $name . ' model FestoonAWW' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+		CommandAttr( undef, $name . ' model FestoonAWW' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
     }
     # Cluster 400 RGB
     elsif (ReadingsVal($name,'product_code','') =~ /C400/ and ReadingsVal($name,'led_profile','') eq 'RGB') {
-      CommandAttr( undef, $name . ' model ClusterRGB' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+		CommandAttr( undef, $name . ' model ClusterRGB' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
     }
     # Cluster 400 AWW
     elsif (ReadingsVal($name,'product_code','') =~ /C400/ and ReadingsVal($name,'led_profile','') eq 'AWW') {
-      CommandAttr( undef, $name . ' model ClusterAWW' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+		CommandAttr( undef, $name . ' model ClusterAWW' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
     }
     # Strings 100 / 250 / 400 / 600 AWW
     elsif (ReadingsVal($name,'product_code','') =~ /(S100|S250|S400|S600)/ and ReadingsVal($name,'led_profile','') eq 'AWW') {
-      CommandAttr( undef, $name . ' model StringsAWW' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+		CommandAttr( undef, $name . ' model StringsAWW' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
     }
     # Strings 100 / 250 / 400 / 600 RGB
     elsif (ReadingsVal($name,'product_code','') =~ /(S100|S250|S400|S600)/ and ReadingsVal($name,'led_profile','') eq 'RGB') {
-      CommandAttr( undef, $name . ' model StringsRGB' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+		CommandAttr( undef, $name . ' model StringsRGB' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
     }
     # Strings 100 / 250 / 400 / 600 RGBW
     elsif (ReadingsVal($name,'product_code','') =~ /(S100|S250|S400|S600)/ and ReadingsVal($name,'led_profile','') eq 'RGBW') {
-      CommandAttr( undef, $name . ' model StringsRGBW' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+		CommandAttr( undef, $name . ' model StringsRGBW' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
     }
     # Dots 200 RGB
     elsif (ReadingsVal($name,'product_code','') =~ /D200/ and ReadingsVal($name,'led_profile','') eq 'RGB') {
-      CommandAttr( undef, $name . ' model DotsRGB' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+		CommandAttr( undef, $name . ' model DotsRGB' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
     }
     # Icicle 190 AWW
     elsif (ReadingsVal($name,'product_code','') =~ /I190/ and ReadingsVal($name,'led_profile','') eq 'AWW') {
-      CommandAttr( undef, $name . ' model IcicleAWW' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+		CommandAttr( undef, $name . ' model IcicleAWW' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
     }
     # Icicle 190 RGB
     elsif (ReadingsVal($name,'product_code','') =~ /I190/ and ReadingsVal($name,'led_profile','') eq 'RGB') {
-      CommandAttr( undef, $name . ' model IcicleRGB' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+		CommandAttr( undef, $name . ' model IcicleRGB' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
     }
     # Icicle 190 RGBW
     elsif (ReadingsVal($name,'product_code','') =~ /I190/ and ReadingsVal($name,'led_profile','') eq 'RGBW') {
-      CommandAttr( undef, $name . ' model IcicleRGBW' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+		CommandAttr( undef, $name . ' model IcicleRGBW' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
     }
     else {
-      readingsSingleUpdate( $hash, "state", "in progress", 1 );
-	  $hash->{message} = "use 'get Device Movies' after progress is finished";
+		readingsSingleUpdate( $hash, "state", "in progress", 1 );
+		$hash->{message} = "use 'get Device Movies' after progress is finished";
     }
 }
 
 sub getMovies($) {
-  my ($hash)  = @_;
-  my $device  = $hash->{NAME};
-  my $movie   = '';
-  my $movies  = '';
-  my $z       = 1;
+	my ($hash)  = @_;
+	my $device  = $hash->{NAME};
+	my $movie   = '';
+	my $movies  = '';
+	my $z       = 1;
   
-  for (my $i = 0; $i <= 15 ; $i++) {
-    # Falls im Namen ein seperator (,) vorkommt, muss dieser ersetzt werden,
-    # da ansonsten die Trennung für den Set-Befehl nicht korrekt ausschaut
-    if ($z == 1) {
-      $movie  = ReadingsVal($device,'movies_' .$z .'_name','Undef');
-      $movie  =~ s/,//g;
-      $movies = $movie;
-    }
-    else {
-      $movie  = ReadingsVal($device,'movies_' .$z .'_name','Undef');
-      $movie  =~ s/,//g;
-      $movies = $movies ."," .$movie;
-    }
-    if ($movies =~ /Undef/) {
-      $movies =~ s/,Undef//g;
-      $movies =~ s/Undef//g;
-      last;
-    }
-    $z +=1;
-  }
-  Log3 $device, 5, "getMovies - Movies -> $movies";
-  if ($z > 1) {
-    # Leerzeichen im Namen ersetzen, damit die Darstellung funktioniert
-    $movies =~ s/ //g;
-    return ($movies);
-  }
-  elsif ($z == 1) {
-    return 'undef';
-  }
+	for (my $i = 0; $i <= 15 ; $i++) {
+		# Falls im Namen ein seperator (,) vorkommt, muss dieser ersetzt werden,
+		# da ansonsten die Trennung fue den Set-Befehl nicht korrekt ausschaut
+		if ($z == 1) {
+			$movie  = ReadingsVal($device,'movies_' .$z .'_name','Undef');
+			$movie  =~ s/,//g;
+			$movies = $movie;
+		}
+		else {
+			$movie  = ReadingsVal($device,'movies_' .$z .'_name','Undef');
+			$movie  =~ s/,//g;
+			$movies = $movies ."," .$movie;
+		}
+		if ($movies =~ /Undef/) {
+			$movies =~ s/,Undef//g;
+			$movies =~ s/Undef//g;
+			last;
+		}
+		$z +=1;
+	}
+	Log3 $device, 5, "getMovies - Movies -> $movies";
+	if ($z > 1) {
+		# Leerzeichen im Namen ersetzen, damit die Darstellung funktioniert
+		$movies =~ s/ //g;
+		$hash->{helper}{listMovies} = $movies;
+		$hash->{helper}{listMoviesDone} = 'finished';
+		return ($movies);
+	}
+	elsif ($z == 1) {
+		$hash->{helper}{listMoviesDone} = 'finished_empty';
+		return 'undef';
+	}
 }
 
 sub Twinkly_PerformHttpRequest($$$$) {
@@ -661,7 +664,7 @@ sub Twinkly_PerformHttpRequest($$$$) {
 	elsif ($method eq 'GET' and $path =~ /gestalt/) {
 	}
 	elsif ($method eq 'GET' and $path =~ /(mode|brightness|saturation|color|device_name|network|movies)/) {
-    $header = 'X-Auth-Token:' .$hash->{TOKEN};
+		$header = 'X-Auth-Token:' .$hash->{TOKEN};
 	}
 	elsif ($method eq 'GET' and $hash->{TOKEN} eq '') {
 		$data = '{"challenge": "' .$hash->{CHALLENGE} .'"} ';
@@ -678,19 +681,19 @@ sub Twinkly_PerformHttpRequest($$$$) {
 			}
 		}
 		elsif ($path =~ /mode/) {
-		  $data = '{"mode":"' .$args .'"} ';
+			$data = '{"mode":"' .$args .'"} ';
 		}
 		elsif ($path =~ /effects/) {
-		  $data = '{"effect_id":' .$args .'}';
+			$data = '{"effect_id":' .$args .'}';
 		}
 		elsif ($path =~ /brightness/) {
-		  $data = '{"mode":"enabled","type":"A","value":' .$args .'}';
+			$data = '{"mode":"enabled","type":"A","value":' .$args .'}';
 		}
 		elsif ($path =~ /saturation/) {
-		  $data = '{"value":"' .$args .',"mode":"enabled","code":1000}';
+			$data = '{"value":"' .$args .',"mode":"enabled","code":1000}';
 		}
 		elsif ($path =~ /movies/) {
-		  $data = '{"id":' .$args .'}';
+			$data = '{"id":' .$args .'}';
 		}
 	}
   
@@ -701,7 +704,7 @@ sub Twinkly_PerformHttpRequest($$$$) {
 					timeout    => 10,
 					hash       => $hash,   	# Muss gesetzt werden, damit die Callback funktion wieder $hash hat
 					method     => $method, 	# Lesen von Inhalten
-					header     => $header, 	# Den Header gemäß abzufragender Daten ändern
+					header     => $header, 	# Den Header gemaess abzufragender Daten aendern
 					data	   => $data,
 					callback   => \&Twinkly_ParseHttpResponse
 					# Diese Funktion soll das Ergebnis dieser HTTP Anfrage bearbeiten
@@ -717,26 +720,39 @@ sub Twinkly_ParseHttpResponse($) {
 	my $device = $hash->{NAME};
 	# wenn ein Fehler bei der HTTP Abfrage aufgetreten ist wie z.B. Timeout, weil IP nicht erreichbar ist
 	if($err ne "") {
-		Log3 $name, 3, "error while requesting ".$param->{url}." - $err - Data -> $data"; # Eintrag fürs Log
+		Log3 $name, 3, "error while requesting ".$param->{url}." - $err - Data -> $data"; # Eintrag fÃ¼rs Log
 		readingsSingleUpdate( $hash, "fullResponse", "$err", 1 );
 		$hash->{NETWORK_STATE} = 'offline';
 	}
-	# wenn die Abfrage erfolgreich war ($data enthŠlt die Ergebnisdaten des HTTP Aufrufes)
+	# wenn die Abfrage erfolgreich war ($data enthÅ lt die Ergebnisdaten des HTTP Aufrufes)
 	elsif($data ne "") {
 		$hash->{NETWORK_STATE} = 'online';
 		if (ReadingsVal($name,'mode','') =~ /(color|demo|effect|movie|playlist|rt)/) {
-		  readingsSingleUpdate( $hash, 'state', 'on', 1 );
+			readingsSingleUpdate( $hash, 'state', 'on', 1 );
 		}
 		elsif (ReadingsVal($name,'mode','') eq 'off') {
-		  readingsSingleUpdate( $hash, 'state', 'off', 1 );
+			readingsSingleUpdate( $hash, 'state', 'off', 1 );
 		}
 		else {
-		  readingsSingleUpdate( $hash, 'state', 'progress working - just wait', 1 );
+			readingsSingleUpdate( $hash, 'state', 'progress working - just wait', 1 );
 		}
 		# Brightness, Saturation und color haben "mode" im JSON, dadurch wird das eigentliche Mode Reading "zerstoert"
 		if ($url !~ /(brightness|saturation|color)/ and $data ne 'Invalid Token') {
-		  json2reading($defs{$device}, $data);
-		  Log3 $name, 4, "Twinkly ($name) - url -> " .$url ." data -> $data";
+			json2reading($defs{$device}, $data);
+			Log3 $name, 4, "Twinkly ($name) - url -> " .$url ." data -> $data";
+			if ($url =~ /movies/) {
+				# Vorhandene Movies ermitteln und aufbereiten fÃ¼r den Set-Befehl
+				# Wenn es nur ein Movie gibt, gibt es keinen seperator (,)
+				my ($movies) = getMovies($hash);
+				if ($movies ne 'undef') {
+					$hash->{message} = '' if ($hash->{message} =~ /No movies found/);
+				}
+				# Keine Movies geuploaded, bitte zuerst Movies hochladen via Twinkly App und speichern
+				elsif ($movies eq 'undef') {
+					$hash->{message} = 'No movies found. Upload first via Twinkly App.';
+				}
+				return;
+			}
 		}
 		my ($ret) = parseJson($hash,$data,$url);
 		Log3 $name, 4, "Twinkly ($name) - Data: $data";
@@ -752,10 +768,10 @@ sub Twinkly_ParseHttpResponse($) {
 		}
 		elsif ($ret !~ /OK/ and $hash->{url} =~ /verify/) {
 			# Abfrage vom Token fehlgeschlagen - TOKEN resetten
-      # und erneut einen Token abrufen
+			# und erneut einen Token abrufen
 			Log3 $name, 4, "Twinkly ($name) - Abfrage vom Token fehlgeschlagen";
 			$hash->{TOKEN} = '';
-      stateRequest($hash);
+			stateRequest($hash);
 		}
 		elsif ($ret !~ /OK/) {
 			# Abfrage fehlgeschlagen - Error Code ausgeben
@@ -770,7 +786,7 @@ sub parseJson($$$) {
 	my $name   = $hash->{NAME};
 	no strict 'refs';
   
-  if ($data eq 'Invalid Token') {
+	if ($data eq 'Invalid Token') {
 		Log3 $name, 4, "Twinkly ($name) - Invalid Token (vermutlich abgelaufen)";
 		return;
 	}
@@ -848,7 +864,7 @@ sub parseJson($$$) {
 =pod
 =item device
 =item summary       Modul to control Twinkly devices like Strings, Cluster or Spritzer
-=item summary_DE    Modul Twinkly GerŠte zu steuern (Mode/Color/Helligkeit/...)
+=item summary_DE    Modul Twinkly Geraete zu steuern (Mode/Color/Helligkeit/...)
 
 =begin html
 
@@ -971,7 +987,7 @@ sub parseJson($$$) {
   <ul>
     <li>disable - deaktiviert das Device</li>
     <li>interval - Interval in Sekunden zwischen zwei Abfragen</li>
-    <li>disabledForIntervals - deaktiviert das Gerät für den angegebenen Zeitinterval (13:00-18:30 or 13:00-18:30 22:00-23:00)</li>
+    <li>disabledForIntervals - deaktiviert das Geaet fuer den angegebenen Zeitinterval (13:00-18:30 or 13:00-18:30 22:00-23:00)</li>
     <li>model - setzt das Model</li>
   </ul>
 </ul>
