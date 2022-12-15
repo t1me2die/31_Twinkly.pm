@@ -43,6 +43,7 @@
 #                     2. If Token is resettet -> Invalid Token -> call stateRequest to get new Token
 # 2022-12-01 (v0.1.6) List of "getMovies" saved with {helper} in devices to save time by the loop
 # 2022-12-12 (v0.1.7) Check JSON if it is a valid string 
+# 2022-12-15 (v0.1.8) refactoring some code (only one package, tip from CoolTux https://forum.fhem.de/index.php/topic,130432.msg1251505.html#msg1251505)
 #
 # To-Do: 
 # Check if the InternalTimer and the NOTIFYDEV correctly work - sometimes I think the modul will be called to often! 
@@ -107,8 +108,7 @@ GP_Export(
 # declare prototype
 
 sub Initialize {
-
-    my ($hash) = @_;
+	my $hash = shift;
 	
     $hash->{SetFn}    = "Twinkly::Set";
     $hash->{GetFn}    = "Twinkly::Get";
@@ -126,9 +126,10 @@ sub Initialize {
 }
 
 sub Define {
-
-    my ( $hash, $def ) = @_;
-    my @a = split( "[ \t][ \t]*", $def );
+	my $hash = shift;
+	my $def  = shift;
+    
+	my @a = split( "[ \t][ \t]*", $def );
 	my $fversion = "31_Twinkly.pm:0.1.8/2022-12-15";
 	my $author  = 'https://forum.fhem.de/index.php?action=profile;u=23907';
 
@@ -160,8 +161,9 @@ sub Define {
 }
 
 sub Undef {
-
-    my ( $hash, $arg ) = @_;
+	my $hash = shift;
+	my $arg  = shift;
+	
     my $ip  = $hash->{IP};
     my $name = $hash->{NAME};
 
@@ -174,9 +176,12 @@ sub Undef {
 }
 
 sub Attr {
-
-    my ( $cmd, $name, $attrName, $attrVal ) = @_;
-    my $hash = $defs{$name};
+	my $cmd      = shift;
+	my $name     = shift;
+	my $attrName = shift;
+	my $attrVal  = shift;
+	
+	my $hash = $defs{$name};
 
     if ( $attrName eq "disable" ) {
         if ( $cmd eq "set" and $attrVal eq "1" ) {
@@ -241,8 +246,10 @@ sub Attr {
 }
 
 sub Notify {
-	my ( $hash, $dev ) = @_;
-    my $name = $hash->{NAME};
+	my $hash = shift;
+	my $dev  = shift;
+	
+	my $name = $hash->{NAME};
 	# Mir ist nicht ganz klar, warum ich bei sämtlichen Notifys, obwohl das Geraet disabled ist trotzdem eine stateRequestTimer aufrufen moechte
     if ( IsDisabled($name) ) {
 		Log3 $name, 5, "Twinkly Notify ($name) - Komme ich hier rein? hash -> $hash - dev -> $dev (" .$dev->{NAME} .")";
@@ -297,8 +304,9 @@ sub Notify {
 }
 
 sub stateRequest {
-    my ($hash) = @_;
-    my $name = $hash->{NAME};
+    my $hash = shift;
+	
+	my $name = $hash->{NAME};
     my %readings;
 
 	Log3 $name, 3, "Twinkly ($name) - stateRequest: name -> $name - Token -> ' " .$hash->{TOKEN} ." '";
@@ -319,8 +327,8 @@ sub stateRequest {
 }
 
 sub stateRequestTimer {
-
-    my ($hash) = @_;
+	my $hash = shift;
+	
     my $name = $hash->{NAME};
 
 	Log3 $name, 3, "Twinkly stateRequestTimer ($name) - Anfang: name -> $name - hash -> $hash";
@@ -333,13 +341,16 @@ sub stateRequestTimer {
 }
 
 sub Set {
-    my ( $hash, $name, @aa ) = @_;
-    my ( $cmd, @args ) = @aa;
-
+    my $hash = shift;
+	my $name = shift;
+	my @aa   = shift;
+	
+	my ( $cmd, @args ) = @aa;
     my $mod;
     my $handle;
     my @movies;
-    my $movies = $hash->{helper}{listMovies};
+    my $movies = '';
+	$movies = $hash->{helper}{listMovies};
     my $network = $hash->{NETWORK_STATE};
     
 	# Vorhandene Movies ermitteln und aufbereiten fÃ¼r den Set-Befehl
@@ -482,8 +493,11 @@ sub Set {
 }
 
 sub Get {
-    my ( $hash, $name, @aa ) = @_;
-    my ( $cmd, @args ) = @aa;
+    my $hash = shift;
+	my $name = shift;
+	my @aa   = shift;
+	
+	my ( $cmd, @args ) = @aa;
 
     if ( $cmd eq 'Token' ) {
 		checkToken($hash);
@@ -519,14 +533,15 @@ sub Get {
 }
 
 sub getToken {
-    my ( $hash ) = @_;
+    my $hash = shift;
+	
     my $name = $hash->{NAME};
     my $mac  = $hash->{IP};
     Twinkly_PerformHttpRequest($hash,'POST','/xled/v1/login','');
 }
 
 sub checkToken {
-    my ( $hash ) = @_;
+    my $hash = shift;
     my $name = $hash->{NAME};
     my $ip  = $hash->{IP};
     Log3 $name, 4, "checkToken ($name) IP -> $ip - Anfang: Token: " .$hash->{TOKEN};
@@ -540,7 +555,8 @@ sub checkToken {
 }
 
 sub checkModel {
-    my ( $hash ) = @_;
+    my $hash = shift;
+	
     my $name = $hash->{NAME};
     # Spritzer
     if (ReadingsVal($name,'product_code','') =~ /B200/) {
@@ -601,7 +617,8 @@ sub checkModel {
 }
 
 sub getMovies {
-	my ($hash)  = @_;
+	my $hash    = shift;
+	
 	my $device  = $hash->{NAME};
 	my $movie   = '';
 	my $movies  = '';
@@ -642,7 +659,10 @@ sub getMovies {
 }
 
 sub Twinkly_PerformHttpRequest {
-	my ($hash,$method,$path,$args) = @_;
+	my $hash   = shift;
+	my $method = shift;
+	my $path   = shift;
+	my $args   = shift;
 	
 	my $data   = "";
 	my $url    = "";
@@ -711,7 +731,10 @@ sub Twinkly_PerformHttpRequest {
 }
 
 sub Twinkly_ParseHttpResponse {
-	my ($param, $err, $data) = @_;
+	my $param  = shift;
+	my $err    = shift;
+	my $data   = shift;
+	
 	my $hash   = $param->{hash};
 	my $url    = $param->{url};
 	my $name   = $hash->{NAME};
@@ -770,7 +793,7 @@ sub Twinkly_ParseHttpResponse {
 				Twinkly_PerformHttpRequest($hash,'GET','/xled/v1/gestalt','');
 				Twinkly_PerformHttpRequest($hash,'GET','/xled/v1/led/mode',$token);
 				Twinkly_PerformHttpRequest($hash,'GET','/xled/v1/led/out/brightness',$token);
-				Twinkly_PerformHttpRequest($hash,'GET','/xled/v1/led/out/saturation',$token);
+				Twinkly_PerformHttpRequest($hash,'GET','/xled/v1/led/out/saturation',$token) if ( AttrVal( $name, 'model', 'none' ) !~ /Gen1/);
 				Twinkly_PerformHttpRequest($hash,'GET','/xled/v1/led/color',$token);
 			}
 			elsif ($ret !~ /OK/ and $hash->{url} =~ /verify/) {
@@ -789,7 +812,10 @@ sub Twinkly_ParseHttpResponse {
 }
 
 sub parseJson {
-	my ($hash,$data,$url) = @_;
+	my $hash   = shift;
+	my $data   = shift;
+	my $url    = shift;
+	
 	my $device = $hash->{NAME};
 	my $name   = $hash->{NAME};
 	no strict 'refs';
