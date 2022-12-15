@@ -42,48 +42,14 @@
 # 2022-11-27 (v0.1.5) 1. call json2reading if $data is not "Invalid Token"
 #                     2. If Token is resettet -> Invalid Token -> call stateRequest to get new Token
 # 2022-12-01 (v0.1.6) List of "getMovies" saved with {helper} in devices to save time by the loop
-#
+# 2022-12-12 (v0.1.7) Check JSON if it is a valid string 
 #
 # To-Do: 
 # Check if the InternalTimer and the NOTIFYDEV correctly work - sometimes I think the modul will be called to often! 
 ###############################################################################
 
-package main;
-
-use strict;
-use warnings;
-
-my $fversion = "31_Twinkly.pm:0.1.6/2022-12-01";
-my $author  = 'https://forum.fhem.de/index.php?action=profile;u=23907';
-
-sub Twinkly_Initialize($) {
-
-    my ($hash) = @_;
-
-    $hash->{SetFn}    = "Twinkly::Set";
-    $hash->{GetFn}    = "Twinkly::Get";
-    $hash->{DefFn}    = "Twinkly::Define";
-    $hash->{NotifyFn} = "Twinkly::Notify";
-    $hash->{UndefFn}  = "Twinkly::Undef";
-    $hash->{AttrFn}   = "Twinkly::Attr";
-    $hash->{AttrList} =
-        "interval "
-      . "disable:1 "
-      . "disabledForIntervals "
-      . "model:ClusterAWW,ClusterRGB,CurtainAWW,CurtainRGB,CurtainRGBW,DotsRGB,FestoonAWW,FestoonRGB,FlexRGB,IcicleAWW,IcicleRGB,IcicleRGBW,LightTree,LineRGB,Spritzer,StringsAWW,StringsRGB,StringsRGBW "
-      . "blockingCallLoglevel:2,3,4,5 "
-      . $readingFnAttributes;
-
-    foreach my $d ( sort keys %{ $modules{Twinkly}{defptr} } ) {
-        my $hash = $modules{Twinkly}{defptr}{$d};
-        $hash->{FVERSION} = $fversion;
-    }
-}
-
 package Twinkly;
-
-my $missingModul = "";
-
+use GPUtils qw(GP_Import GP_Export);
 use strict;
 use warnings;
 use POSIX;
@@ -95,8 +61,7 @@ use constant TRUE => not FALSE;
 use Color;
 use List::MoreUtils qw(firstidx);
 
-use GPUtils qw(GP_Import);
-
+my $missingModul = "";
 eval "use JSON;1"     or $missingModul .= "JSON ";
 eval "use Blocking;1" or $missingModul .= "Blocking ";
 
@@ -120,6 +85,7 @@ BEGIN {
           gettimeofday
           InternalTimer
           RemoveInternalTimer
+		  readingFnAttributes
           DoTrigger
           BlockingKill
           BlockingCall
@@ -131,12 +97,40 @@ BEGIN {
     );
 }
 
+#-- Export to main context with different name
+GP_Export(
+    qw(
+      Initialize
+      )
+);
+
 # declare prototype
 
-sub Define($$) {
+sub Initialize {
+
+    my ($hash) = @_;
+	
+    $hash->{SetFn}    = "Twinkly::Set";
+    $hash->{GetFn}    = "Twinkly::Get";
+    $hash->{DefFn}    = "Twinkly::Define";
+    $hash->{NotifyFn} = "Twinkly::Notify";
+    $hash->{UndefFn}  = "Twinkly::Undef";
+    $hash->{AttrFn}   = "Twinkly::Attr";
+    $hash->{AttrList} =
+        "interval "
+      . "disable:1 "
+      . "disabledForIntervals "
+      . "model:ClusterAWW,ClusterRGB,CurtainAWW,CurtainRGB,CurtainRGBW,DotsRGB,FestoonAWW,FestoonRGB,FlexRGB,IcicleAWW,IcicleRGB,IcicleRGBW,IcicleRGBGen1,LightTree,LineRGB,Spritzer,StringsAWW,StringsRGB,StringsRGBW "
+      . "blockingCallLoglevel:2,3,4,5 "
+      . $readingFnAttributes;
+}
+
+sub Define {
 
     my ( $hash, $def ) = @_;
     my @a = split( "[ \t][ \t]*", $def );
+	my $fversion = "31_Twinkly.pm:0.1.8/2022-12-15";
+	my $author  = 'https://forum.fhem.de/index.php?action=profile;u=23907';
 
     return "too few parameters: define <name> Twinkly <IP / Hostname>" if ( @a != 3 );
     return "Cannot define Twinkly device. Perl modul ${missingModul} is missing." if ($missingModul);
@@ -165,7 +159,7 @@ sub Define($$) {
     return undef;
 }
 
-sub Undef($$) {
+sub Undef {
 
     my ( $hash, $arg ) = @_;
     my $ip  = $hash->{IP};
@@ -179,7 +173,7 @@ sub Undef($$) {
     return undef;
 }
 
-sub Attr(@) {
+sub Attr {
 
     my ( $cmd, $name, $attrName, $attrVal ) = @_;
     my $hash = $defs{$name};
@@ -246,7 +240,7 @@ sub Attr(@) {
 	return undef;
 }
 
-sub Notify($$) {
+sub Notify {
 	my ( $hash, $dev ) = @_;
     my $name = $hash->{NAME};
 	# Mir ist nicht ganz klar, warum ich bei sämtlichen Notifys, obwohl das Geraet disabled ist trotzdem eine stateRequestTimer aufrufen moechte
@@ -302,7 +296,7 @@ sub Notify($$) {
 
 }
 
-sub stateRequest($) {
+sub stateRequest {
     my ($hash) = @_;
     my $name = $hash->{NAME};
     my %readings;
@@ -324,7 +318,7 @@ sub stateRequest($) {
     }
 }
 
-sub stateRequestTimer($) {
+sub stateRequestTimer {
 
     my ($hash) = @_;
     my $name = $hash->{NAME};
@@ -338,7 +332,7 @@ sub stateRequestTimer($) {
     Log3 $name, 4, "Twinkly ($name) - stateRequestTimer: Call Request Timer";
 }
 
-sub Set($$@) {
+sub Set {
     my ( $hash, $name, @aa ) = @_;
     my ( $cmd, @args ) = @aa;
 
@@ -487,7 +481,7 @@ sub Set($$@) {
     return undef;
 }
 
-sub Get($$@) {
+sub Get {
     my ( $hash, $name, @aa ) = @_;
     my ( $cmd, @args ) = @aa;
 
@@ -524,14 +518,14 @@ sub Get($$@) {
     return undef;
 }
 
-sub getToken($) {
+sub getToken {
     my ( $hash ) = @_;
     my $name = $hash->{NAME};
     my $mac  = $hash->{IP};
     Twinkly_PerformHttpRequest($hash,'POST','/xled/v1/login','');
 }
 
-sub checkToken($) {
+sub checkToken {
     my ( $hash ) = @_;
     my $name = $hash->{NAME};
     my $ip  = $hash->{IP};
@@ -545,7 +539,7 @@ sub checkToken($) {
     Log3 $name, 4, "checkToken ($name) IP -> $ip - Run Twinkly_PerformHttpRequest with POST, /xled/v1/verify und Token: " .$hash->{TOKEN};
 }
 
-sub checkModel($) {
+sub checkModel {
     my ( $hash ) = @_;
     my $name = $hash->{NAME};
     # Spritzer
@@ -596,13 +590,17 @@ sub checkModel($) {
     elsif (ReadingsVal($name,'product_code','') =~ /I190/ and ReadingsVal($name,'led_profile','') eq 'RGBW') {
 		CommandAttr( undef, $name . ' model IcicleRGBW' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
     }
+	# Wall (icicle) 200 RGB Gen. 1
+    elsif (ReadingsVal($name,'product_code','') =~ /I200/ and ReadingsVal($name,'led_profile','') eq 'RGB') {
+		CommandAttr( undef, $name . ' model IcicleRGBGen1' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+    }
     else {
 		readingsSingleUpdate( $hash, "state", "in progress", 1 );
 		$hash->{message} = "use 'get Device Movies' after progress is finished";
     }
 }
 
-sub getMovies($) {
+sub getMovies {
 	my ($hash)  = @_;
 	my $device  = $hash->{NAME};
 	my $movie   = '';
@@ -643,7 +641,7 @@ sub getMovies($) {
 	}
 }
 
-sub Twinkly_PerformHttpRequest($$$$) {
+sub Twinkly_PerformHttpRequest {
 	my ($hash,$method,$path,$args) = @_;
 	
 	my $data   = "";
@@ -712,7 +710,7 @@ sub Twinkly_PerformHttpRequest($$$$) {
 	HttpUtils_NonblockingGet($param);		# Starten der HTTP Abfrage. Es gibt keinen Return-Code. 
 }
 
-sub Twinkly_ParseHttpResponse($) {
+sub Twinkly_ParseHttpResponse {
 	my ($param, $err, $data) = @_;
 	my $hash   = $param->{hash};
 	my $url    = $param->{url};
@@ -724,63 +722,73 @@ sub Twinkly_ParseHttpResponse($) {
 		readingsSingleUpdate( $hash, "fullResponse", "$err", 1 );
 		$hash->{NETWORK_STATE} = 'offline';
 	}
-	# wenn die Abfrage erfolgreich war ($data enthÅ lt die Ergebnisdaten des HTTP Aufrufes)
+	# wenn die Abfrage erfolgreich war ($data enthÅ lt die Ergebnisdaten des HTTP Aufrufes)
 	elsif($data ne "") {
-		$hash->{NETWORK_STATE} = 'online';
-		if (ReadingsVal($name,'mode','') =~ /(color|demo|effect|movie|playlist|rt)/) {
-			readingsSingleUpdate( $hash, 'state', 'on', 1 );
-		}
-		elsif (ReadingsVal($name,'mode','') eq 'off') {
-			readingsSingleUpdate( $hash, 'state', 'off', 1 );
+		Log3 $name, 4, "Twinkly ($name) - Data: $data";
+		# Check JSON String if valid
+		my $maybe_json = $data;
+		my $json_out = eval { decode_json($maybe_json) };
+		if ($@) {
+			Log3 $name, 2, "Twinkly ($name) Twinkly_ParseHttpResponse - decode_json failed! Error: $@ - Data: $data";
+			return;
 		}
 		else {
-			readingsSingleUpdate( $hash, 'state', 'progress working - just wait', 1 );
-		}
-		# Brightness, Saturation und color haben "mode" im JSON, dadurch wird das eigentliche Mode Reading "zerstoert"
-		if ($url !~ /(brightness|saturation|color)/ and $data ne 'Invalid Token') {
-			json2reading($defs{$device}, $data);
-			Log3 $name, 4, "Twinkly ($name) - url -> " .$url ." data -> $data";
-			if ($url =~ /movies/) {
-				# Vorhandene Movies ermitteln und aufbereiten fÃ¼r den Set-Befehl
-				# Wenn es nur ein Movie gibt, gibt es keinen seperator (,)
-				my ($movies) = getMovies($hash);
-				if ($movies ne 'undef') {
-					$hash->{message} = '' if ($hash->{message} =~ /No movies found/);
-				}
-				# Keine Movies geuploaded, bitte zuerst Movies hochladen via Twinkly App und speichern
-				elsif ($movies eq 'undef') {
-					$hash->{message} = 'No movies found. Upload first via Twinkly App.';
-				}
-				return;
+			$hash->{NETWORK_STATE} = 'online';
+			if (ReadingsVal($name,'mode','') =~ /(color|demo|effect|movie|playlist|rt)/) {
+				readingsSingleUpdate( $hash, 'state', 'on', 1 );
 			}
-		}
-		my ($ret) = parseJson($hash,$data,$url);
-		Log3 $name, 4, "Twinkly ($name) - Data: $data";
-		if ($ret =~ /OK/ and $hash->{url} =~ /verify/) {
-			# Token erfolgreich abgefragt
-			Log3 $name, 4, "Twinkly ($name) - Token erfolgreich abgefragt";
-			my $token = $hash->{TOKEN};
-			Twinkly_PerformHttpRequest($hash,'GET','/xled/v1/gestalt','');
-			Twinkly_PerformHttpRequest($hash,'GET','/xled/v1/led/mode',$token);
-			Twinkly_PerformHttpRequest($hash,'GET','/xled/v1/led/out/brightness',$token);
-			Twinkly_PerformHttpRequest($hash,'GET','/xled/v1/led/out/saturation',$token);
-			Twinkly_PerformHttpRequest($hash,'GET','/xled/v1/led/color',$token);
-		}
-		elsif ($ret !~ /OK/ and $hash->{url} =~ /verify/) {
-			# Abfrage vom Token fehlgeschlagen - TOKEN resetten
-			# und erneut einen Token abrufen
-			Log3 $name, 4, "Twinkly ($name) - Abfrage vom Token fehlgeschlagen";
-			$hash->{TOKEN} = '';
-			stateRequest($hash);
-		}
-		elsif ($ret !~ /OK/) {
-			# Abfrage fehlgeschlagen - Error Code ausgeben
-			Log3 $name, 2, "Twinkly ($name) - Error: $ret";
+			elsif (ReadingsVal($name,'mode','') eq 'off') {
+				readingsSingleUpdate( $hash, 'state', 'off', 1 );
+			}
+			else {
+				readingsSingleUpdate( $hash, 'state', 'progress working - just wait', 1 );
+			}
+			# Brightness, Saturation und color haben "mode" im JSON, dadurch wird das eigentliche Mode Reading "zerstoert"
+			if ($url !~ /(brightness|saturation|color)/ and $data ne 'Invalid Token') {
+				json2reading($defs{$device}, $data);
+				Log3 $name, 4, "Twinkly ($name) - url -> " .$url ." data -> $data";
+				if ($url =~ /movies/) {
+					# Vorhandene Movies ermitteln und aufbereiten fÃ¼r den Set-Befehl
+					# Wenn es nur ein Movie gibt, gibt es keinen seperator (,)
+					my ($movies) = getMovies($hash);
+					if ($movies ne 'undef') {
+						$hash->{message} = '' if ($hash->{message} =~ /No movies found/);
+					}
+					# Keine Movies geuploaded, bitte zuerst Movies hochladen via Twinkly App und speichern
+					elsif ($movies eq 'undef') {
+						$hash->{message} = 'No movies found. Upload first via Twinkly App.';
+					}
+					return;
+				}
+			}
+			my ($ret) = parseJson($hash,$data,$url);
+			#Log3 $name, 4, "Twinkly ($name) - Data: $data";
+			if ($ret =~ /OK/ and $hash->{url} =~ /verify/) {
+				# Token erfolgreich abgefragt
+				Log3 $name, 4, "Twinkly ($name) - Token erfolgreich abgefragt";
+				my $token = $hash->{TOKEN};
+				Twinkly_PerformHttpRequest($hash,'GET','/xled/v1/gestalt','');
+				Twinkly_PerformHttpRequest($hash,'GET','/xled/v1/led/mode',$token);
+				Twinkly_PerformHttpRequest($hash,'GET','/xled/v1/led/out/brightness',$token);
+				Twinkly_PerformHttpRequest($hash,'GET','/xled/v1/led/out/saturation',$token);
+				Twinkly_PerformHttpRequest($hash,'GET','/xled/v1/led/color',$token);
+			}
+			elsif ($ret !~ /OK/ and $hash->{url} =~ /verify/) {
+				# Abfrage vom Token fehlgeschlagen - TOKEN resetten
+				# und erneut einen Token abrufen
+				Log3 $name, 4, "Twinkly ($name) - Abfrage vom Token fehlgeschlagen";
+				$hash->{TOKEN} = '';
+				stateRequest($hash);
+			}
+			elsif ($ret !~ /OK/) {
+				# Abfrage fehlgeschlagen - Error Code ausgeben
+				Log3 $name, 2, "Twinkly ($name) - Error: $ret";
+			}
 		}
 	}
 }
 
-sub parseJson($$$) {
+sub parseJson {
 	my ($hash,$data,$url) = @_;
 	my $device = $hash->{NAME};
 	my $name   = $hash->{NAME};
@@ -788,6 +796,10 @@ sub parseJson($$$) {
   
 	if ($data eq 'Invalid Token') {
 		Log3 $name, 4, "Twinkly ($name) - Invalid Token (vermutlich abgelaufen)";
+		return;
+	}
+	elsif ($data eq 'empty answer received') {
+		Log3 $name, 4, "Twinkly ($name) - Empty answer received (vermutlich alte Version? Gen1?)";
 		return;
 	}
   
