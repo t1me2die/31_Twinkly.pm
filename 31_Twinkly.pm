@@ -44,6 +44,7 @@
 # 2022-12-01 (v0.1.6) List of "getMovies" saved with {helper} in devices to save time by the loop
 # 2022-12-12 (v0.1.7) Check JSON if it is a valid string 
 # 2022-12-15 (v0.1.8) refactoring some code (only one package, tip from CoolTux https://forum.fhem.de/index.php/topic,130432.msg1251505.html#msg1251505)
+# 2022-12-16 (v0.1.9) exclude movie-function for Gen1 Devices
 #
 # To-Do: 
 # Check if the InternalTimer and the NOTIFYDEV correctly work - sometimes I think the modul will be called to often! 
@@ -130,7 +131,7 @@ sub Define {
 	my $def  = shift;
     
 	my @a = split( "[ \t][ \t]*", $def );
-	my $fversion = "31_Twinkly.pm:0.1.8/2022-12-15";
+	my $fversion = "31_Twinkly.pm:0.1.9/2022-12-16";
 	my $author  = 'https://forum.fhem.de/index.php?action=profile;u=23907';
 
     return "too few parameters: define <name> Twinkly <IP / Hostname>" if ( @a != 3 );
@@ -483,7 +484,7 @@ sub Set {
 		$list .= " brightness:slider,0,1,100" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' );
 		$list .= " saturation:slider,0,1,100" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' );
 		$list .= " mode:off,color,demo,effect,movie,playlist,rt" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' );
-		$list .= " movie:$movies" unless ( $movies eq '' );
+		$list .= " movie:$movies" unless ( $movies eq '' or AttrVal( $name, 'model', 'none' ) =~ /Gen1/);
 		$list .= " on:noArg" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' );
 		$list .= " off:noArg" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' );
 		$list .= " effect_id:0,1,2,3,4" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' );
@@ -523,7 +524,7 @@ sub Get {
 		my $list = "";
 		$list .= " Gestalt:noArg Gestalt:noArg" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' );
 		$list .= " Mode:noArg Mode:noArg" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' );
-		$list .= " Movies:noArg Movies:noArg" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+		$list .= " Movies:noArg Movies:noArg" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' or AttrVal( $name, 'model', 'none' ) =~ /Gen1/);
 		$list .= " Network:noArg Network:noArg" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' );
 		$list .= " Token:noArg Token:noArg" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' );
 		$list .= " Name:noArg Name:noArg" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' );
