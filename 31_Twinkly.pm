@@ -44,7 +44,6 @@
 # 2022-12-01 (v0.1.6) List of "getMovies" saved with {helper} in devices to save time by the loop
 # 2022-12-12 (v0.1.7) Check JSON if it is a valid string 
 # 2022-12-15 (v0.1.8) refactoring some code (only one package, tip from CoolTux https://forum.fhem.de/index.php/topic,130432.msg1251505.html#msg1251505)
-# 2022-12-16 (v0.1.9) exclude movie-function for Gen1 Devices
 #
 # To-Do: 
 # Check if the InternalTimer and the NOTIFYDEV correctly work - sometimes I think the modul will be called to often! 
@@ -111,12 +110,19 @@ GP_Export(
 sub Initialize {
 	my $hash = shift;
 	
-    $hash->{SetFn}    = "Twinkly::Set";
-    $hash->{GetFn}    = "Twinkly::Get";
-    $hash->{DefFn}    = "Twinkly::Define";
-    $hash->{NotifyFn} = "Twinkly::Notify";
-    $hash->{UndefFn}  = "Twinkly::Undef";
-    $hash->{AttrFn}   = "Twinkly::Attr";
+    $hash->{SetFn}    = \&Set;
+    $hash->{GetFn}    = \&Get;
+    $hash->{DefFn}    = \&Define;
+    $hash->{NotifyFn} = \&Notify;
+    $hash->{UndefFn}  = \&Undef;
+    $hash->{AttrFn}   = \&Attr;
+    
+    #$hash->{SetFn}    = "Twinkly::Set";
+    #$hash->{GetFn}    = "Twinkly::Get";
+    #$hash->{DefFn}    = "Twinkly::Define";
+    #$hash->{NotifyFn} = "Twinkly::Notify";
+    #$hash->{UndefFn}  = "Twinkly::Undef";
+    #$hash->{AttrFn}   = "Twinkly::Attr";
     $hash->{AttrList} =
         "interval "
       . "disable:1 "
@@ -127,11 +133,10 @@ sub Initialize {
 }
 
 sub Define {
-	my $hash = shift;
-	my $def  = shift;
+	my ( $hash, $def ) = @_;
     
 	my @a = split( "[ \t][ \t]*", $def );
-	my $fversion = "31_Twinkly.pm:0.1.9/2022-12-16";
+	my $fversion = "31_Twinkly.pm:0.1.8/2022-12-15";
 	my $author  = 'https://forum.fhem.de/index.php?action=profile;u=23907';
 
     return "too few parameters: define <name> Twinkly <IP / Hostname>" if ( @a != 3 );
@@ -162,8 +167,7 @@ sub Define {
 }
 
 sub Undef {
-	my $hash = shift;
-	my $arg  = shift;
+	my ( $hash, $arg ) = @_;
 	
     my $ip  = $hash->{IP};
     my $name = $hash->{NAME};
@@ -177,10 +181,7 @@ sub Undef {
 }
 
 sub Attr {
-	my $cmd      = shift;
-	my $name     = shift;
-	my $attrName = shift;
-	my $attrVal  = shift;
+	my ( $cmd, $name, $attrName, $attrVal ) = @_;
 	
 	my $hash = $defs{$name};
 
@@ -238,7 +239,7 @@ sub Attr {
 		CommandAttr( undef, $name . ' icon hue_room_nursery' ) if ( AttrVal( $name, 'icon', 'none' ) eq 'none' and $attrVal =~ /Spritzer/);
 		CommandAttr( undef, $name . ' icon hue_filled_lightstrip' ) if ( AttrVal( $name, 'icon', 'none' ) eq 'none' and $attrVal =~ /(String|Line)/);
 		CommandAttr( undef, $name . ' icon light_fairy_lights' ) if ( AttrVal( $name, 'icon', 'none' ) eq 'none' and $attrVal =~ /(Cluster|Festoon)/);
-		# webCmd setzen fÃ¼r Frontend, falls Model angegeben / ermittelt wurde
+		# webCmd setzen f√ºr Frontend, falls Model angegeben / ermittelt wurde
 		CommandAttr( undef, $name . ' webCmd brightness:hue:on:off' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' and $attrVal =~ /(RGB|Spritzer|LightTree)/ );
 		CommandAttr( undef, $name . ' webCmd brightness:ct:on:off' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' and $attrVal =~ /AWW/);
     }
@@ -247,11 +248,10 @@ sub Attr {
 }
 
 sub Notify {
-	my $hash = shift;
-	my $dev  = shift;
+    my ( $hash, $dev ) = @_;
 	
-	my $name = $hash->{NAME};
-	# Mir ist nicht ganz klar, warum ich bei sämtlichen Notifys, obwohl das Geraet disabled ist trotzdem eine stateRequestTimer aufrufen moechte
+    my $name = $hash->{NAME};
+    # Mir ist nicht ganz klar, warum ich bei s‰mtlichen Notifys, obwohl das Geraet disabled ist trotzdem eine stateRequestTimer aufrufen moechte
     if ( IsDisabled($name) ) {
 		Log3 $name, 5, "Twinkly Notify ($name) - Komme ich hier rein? hash -> $hash - dev -> $dev (" .$dev->{NAME} .")";
 		#return stateRequestTimer($hash);
@@ -328,7 +328,7 @@ sub stateRequest {
 }
 
 sub stateRequestTimer {
-	my $hash = shift;
+    my $hash = shift;
 	
     my $name = $hash->{NAME};
 
@@ -342,33 +342,33 @@ sub stateRequestTimer {
 }
 
 sub Set {
-    my $hash = shift;
-	my $name = shift;
-	my @aa   = shift;
-	
-	my ( $cmd, @args ) = @aa;
+    my ( $hash, $name, @aa ) = @_;
+    my ( $cmd, @args ) = @aa;
+    
     my $mod;
     my $handle;
     my @movies;
     my $movies = '';
-	$movies = $hash->{helper}{listMovies};
+    $movies = $hash->{helper}{listMovies};
     my $network = $hash->{NETWORK_STATE};
     
-	# Vorhandene Movies ermitteln und aufbereiten fÃ¼r den Set-Befehl
+    #Log3 $name, 4, "Twinkly ($name) - hash -> $hash - aa -> @aa - cmd -> $cmd - args -> @args";
+    
+    # Vorhandene Movies ermitteln und aufbereiten f√ºr den Set-Befehl
     # Wenn es nur ein Movie gibt, gibt es keinen seperator (,)
     if ($movies ne '') {
-		my $pos = index($movies,',');
-		if ($pos > 0) {
-			@movies = split(',',$movies);
-		}
-		elsif ($pos == 0) {
-			@movies = $movies;
-		}
+      my $pos = index($movies,',');
+      if ($pos > 0) {
+        @movies = split(',',$movies);
+      }
+      elsif ($pos == 0) {
+        @movies = $movies;
+      }
     }
 
     if ( $cmd eq "hue" ) {
-		return "usage: devicename <name> - cmd -> $cmd - value -> " .$args[0] ." - args -> @args" if ( @args < 1 );
-		my $hue = $args[0];
+      return "usage: devicename <name> - cmd -> $cmd - value -> " .$args[0] ." - args -> @args" if ( @args < 1 );
+      my $hue = $args[0];
 		return "Hue value is out of range (0...360)" if ($hue < 0 or $hue > 360);
 		if (ReadingsVal($name, 'mode','') ne 'color') {
 			Twinkly_PerformHttpRequest($hash,'POST','/xled/v1/led/mode','color');
@@ -484,7 +484,7 @@ sub Set {
 		$list .= " brightness:slider,0,1,100" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' );
 		$list .= " saturation:slider,0,1,100" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' );
 		$list .= " mode:off,color,demo,effect,movie,playlist,rt" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' );
-		$list .= " movie:$movies" unless ( $movies eq '' or AttrVal( $name, 'model', 'none' ) =~ /Gen1/);
+		$list .= " movie:$movies" unless ( $movies eq '' );
 		$list .= " on:noArg" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' );
 		$list .= " off:noArg" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' );
 		$list .= " effect_id:0,1,2,3,4" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' );
@@ -494,11 +494,8 @@ sub Set {
 }
 
 sub Get {
-    my $hash = shift;
-	my $name = shift;
-	my @aa   = shift;
-	
-	my ( $cmd, @args ) = @aa;
+    my ( $hash, $name, @aa ) = @_;
+    my ( $cmd, @args ) = @aa;
 
     if ( $cmd eq 'Token' ) {
 		checkToken($hash);
@@ -524,7 +521,7 @@ sub Get {
 		my $list = "";
 		$list .= " Gestalt:noArg Gestalt:noArg" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' );
 		$list .= " Mode:noArg Mode:noArg" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' );
-		$list .= " Movies:noArg Movies:noArg" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' or AttrVal( $name, 'model', 'none' ) =~ /Gen1/);
+		$list .= " Movies:noArg Movies:noArg" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' );
 		$list .= " Network:noArg Network:noArg" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' );
 		$list .= " Token:noArg Token:noArg" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' );
 		$list .= " Name:noArg Name:noArg" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' );
@@ -660,10 +657,7 @@ sub getMovies {
 }
 
 sub Twinkly_PerformHttpRequest {
-	my $hash   = shift;
-	my $method = shift;
-	my $path   = shift;
-	my $args   = shift;
+	my ($hash,$method,$path,$args) = @_;
 	
 	my $data   = "";
 	my $url    = "";
@@ -732,9 +726,7 @@ sub Twinkly_PerformHttpRequest {
 }
 
 sub Twinkly_ParseHttpResponse {
-	my $param  = shift;
-	my $err    = shift;
-	my $data   = shift;
+	my ($param, $err, $data) = @_;
 	
 	my $hash   = $param->{hash};
 	my $url    = $param->{url};
@@ -742,11 +734,11 @@ sub Twinkly_ParseHttpResponse {
 	my $device = $hash->{NAME};
 	# wenn ein Fehler bei der HTTP Abfrage aufgetreten ist wie z.B. Timeout, weil IP nicht erreichbar ist
 	if($err ne "") {
-		Log3 $name, 3, "error while requesting ".$param->{url}." - $err - Data -> $data"; # Eintrag fÃ¼rs Log
+		Log3 $name, 3, "error while requesting ".$param->{url}." - $err - Data -> $data"; # Eintrag f√ºrs Log
 		readingsSingleUpdate( $hash, "fullResponse", "$err", 1 );
 		$hash->{NETWORK_STATE} = 'offline';
 	}
-	# wenn die Abfrage erfolgreich war ($data enthÅ lt die Ergebnisdaten des HTTP Aufrufes)
+	# wenn die Abfrage erfolgreich war ($data enth≈ lt die Ergebnisdaten des HTTP Aufrufes)
 	elsif($data ne "") {
 		Log3 $name, 4, "Twinkly ($name) - Data: $data";
 		# Check JSON String if valid
@@ -772,7 +764,7 @@ sub Twinkly_ParseHttpResponse {
 				json2reading($defs{$device}, $data);
 				Log3 $name, 4, "Twinkly ($name) - url -> " .$url ." data -> $data";
 				if ($url =~ /movies/) {
-					# Vorhandene Movies ermitteln und aufbereiten fÃ¼r den Set-Befehl
+					# Vorhandene Movies ermitteln und aufbereiten f√ºr den Set-Befehl
 					# Wenn es nur ein Movie gibt, gibt es keinen seperator (,)
 					my ($movies) = getMovies($hash);
 					if ($movies ne 'undef') {
@@ -813,9 +805,7 @@ sub Twinkly_ParseHttpResponse {
 }
 
 sub parseJson {
-	my $hash   = shift;
-	my $data   = shift;
-	my $url    = shift;
+	my ($hash,$data,$url) = @_;
 	
 	my $device = $hash->{NAME};
 	my $name   = $hash->{NAME};
