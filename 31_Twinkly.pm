@@ -46,6 +46,7 @@
 # 2022-12-15 (v0.1.8) refactoring some code (only one package, tip from CoolTux https://forum.fhem.de/index.php/topic,130432.msg1251505.html#msg1251505)
 # 2022-12-16 (v0.1.9) exclude movie-function for Gen1 Devices
 # 2022-12-18 (v0.2.0) problems with parameters
+# 2022-12-19 (v0.2.1) if FHEM restart, reread Movies for helper Reading
 #
 # To-Do: 
 # Check if the InternalTimer and the NOTIFYDEV correctly work - sometimes I think the modul will be called to often! 
@@ -138,7 +139,7 @@ sub Define {
 	my ( $hash, $def ) = @_;
     
 	my @a = split( "[ \t][ \t]*", $def );
-	my $fversion = "31_Twinkly.pm:0.2.0/2022-12-18";
+	my $fversion = "31_Twinkly.pm:0.2.1/2022-12-19";
 	my $author  = 'https://forum.fhem.de/index.php?action=profile;u=23907';
 
     return "too few parameters: define <name> Twinkly <IP / Hostname>" if ( @a != 3 );
@@ -303,7 +304,17 @@ sub Notify {
             and $devname eq 'global'
         )
       );
-
+	# Wenn FHEM neu gestartet wird, muss initial einmal das Movie Helper Reading angelegt werden
+	if (grep /^INITIALIZED$/, @{$events}) {
+		my ($movies) = getMovies($hash);
+		if ($movies ne 'undef') {
+			$hash->{message} = '' if ($hash->{message} =~ /No movies found/);
+		}
+		# Keine Movies geuploaded, bitte zuerst Movies hochladen via Twinkly App und speichern
+		elsif ($movies eq 'undef') {
+			$hash->{message} = 'No movies found. Upload first via Twinkly App.';
+		}		
+	}
 }
 
 sub stateRequest {
