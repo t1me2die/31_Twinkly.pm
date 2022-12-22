@@ -304,7 +304,7 @@ sub Notify {
         )
       );
 	# Wenn FHEM neu gestartet wird, muss initial einmal das Movie Helper Reading angelegt werden
-	if (grep /^INITIALIZED$/, @{$events} and $devname eq 'global' and AttrVal( $name, 'model', 'none' ) !~ /Gen1/)) {
+	if (grep /^INITIALIZED$/, @{$events} and $devname eq 'global' and AttrVal( $name, 'model', 'none' ) !~ /Gen1/) {
 		my ($movies) = getMovies($hash);
 		if ($movies ne 'undef') {
 			$hash->{message} = '' if ($hash->{message} =~ /No movies found/);
