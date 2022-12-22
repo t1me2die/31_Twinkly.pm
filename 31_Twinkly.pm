@@ -46,7 +46,6 @@
 # 2022-12-15 (v0.1.8) refactoring some code (only one package, tip from CoolTux https://forum.fhem.de/index.php/topic,130432.msg1251505.html#msg1251505)
 # 2022-12-16 (v0.1.9) exclude movie-function for Gen1 Devices
 # 2022-12-18 (v0.2.0) problems with parameters
-# 2022-12-19 (v0.2.1) if FHEM restart, reread Movies for helper Reading
 #
 # To-Do: 
 # Check if the InternalTimer and the NOTIFYDEV correctly work - sometimes I think the modul will be called to often! 
@@ -139,7 +138,7 @@ sub Define {
 	my ( $hash, $def ) = @_;
     
 	my @a = split( "[ \t][ \t]*", $def );
-	my $fversion = "31_Twinkly.pm:0.2.1/2022-12-19";
+	my $fversion = "31_Twinkly.pm:0.2.0/2022-12-18";
 	my $author  = 'https://forum.fhem.de/index.php?action=profile;u=23907';
 
     return "too few parameters: define <name> Twinkly <IP / Hostname>" if ( @a != 3 );
@@ -242,7 +241,7 @@ sub Attr {
 		CommandAttr( undef, $name . ' icon hue_room_nursery' ) if ( AttrVal( $name, 'icon', 'none' ) eq 'none' and $attrVal =~ /Spritzer/);
 		CommandAttr( undef, $name . ' icon hue_filled_lightstrip' ) if ( AttrVal( $name, 'icon', 'none' ) eq 'none' and $attrVal =~ /(String|Line)/);
 		CommandAttr( undef, $name . ' icon light_fairy_lights' ) if ( AttrVal( $name, 'icon', 'none' ) eq 'none' and $attrVal =~ /(Cluster|Festoon)/);
-		# webCmd setzen f√ºr Frontend, falls Model angegeben / ermittelt wurde
+		# webCmd setzen fv∫r Frontend, falls Model angegeben / ermittelt wurde
 		CommandAttr( undef, $name . ' webCmd brightness:hue:on:off' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' and $attrVal =~ /(RGB|Spritzer|LightTree)/ );
 		CommandAttr( undef, $name . ' webCmd brightness:ct:on:off' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' and $attrVal =~ /AWW/);
     }
@@ -254,7 +253,7 @@ sub Notify {
     my ( $hash, $dev ) = @_;
 	
     my $name = $hash->{NAME};
-    # Mir ist nicht ganz klar, warum ich bei s‰mtlichen Notifys, obwohl das Geraet disabled ist trotzdem eine stateRequestTimer aufrufen moechte
+    # Mir ist nicht ganz klar, warum ich bei sâmtlichen Notifys, obwohl das Geraet disabled ist trotzdem eine stateRequestTimer aufrufen moechte
     if ( IsDisabled($name) ) {
 		Log3 $name, 5, "Twinkly Notify ($name) - Komme ich hier rein? hash -> $hash - dev -> $dev (" .$dev->{NAME} .")";
 		#return stateRequestTimer($hash);
@@ -314,7 +313,7 @@ sub Notify {
 		elsif ($movies eq 'undef') {
 			$hash->{message} = 'No movies found. Upload first via Twinkly App.';
 		}		
-	}
+	}	
 }
 
 sub stateRequest {
@@ -367,7 +366,7 @@ sub Set {
     
     #Log3 $name, 4, "Twinkly ($name) - hash -> $hash - aa -> @aa - cmd -> $cmd - args -> @args";
     
-    # Vorhandene Movies ermitteln und aufbereiten f√ºr den Set-Befehl
+    # Vorhandene Movies ermitteln und aufbereiten fv∫r den Set-Befehl
     # Wenn es nur ein Movie gibt, gibt es keinen seperator (,)
     if ($movies ne '') {
       my $pos = index($movies,',');
@@ -492,8 +491,8 @@ sub Set {
     }
     else {
 		my $list = "";
-		$list .= "hue:colorpicker,HUE,0,1,360" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' or AttrVal( $name, 'model', 'none' ) !~ /(RGB|Spritzer|LightTree)/);
-		$list .= " ct:colorpicker,CT,2000,10,6500" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' or AttrVal( $name, 'model', 'none' ) !~ /(AWW|RGBW)/);
+		$list .= "hue:colorpicker,HUE,0,1,360" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' or AttrVal( $name, 'model', 'none' ) !~ /(RGB|Spritzer|LightTree|Gen1)/);
+		$list .= " ct:colorpicker,CT,2000,10,6500" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' or AttrVal( $name, 'model', 'none' ) !~ /(AWW|RGBW|Gen1)/);
 		$list .= " brightness:slider,0,1,100" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' );
 		$list .= " saturation:slider,0,1,100" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' );
 		$list .= " mode:off,color,demo,effect,movie,playlist,rt" unless ( AttrVal( $name, 'model', 'none' ) eq 'none' );
@@ -747,11 +746,11 @@ sub Twinkly_ParseHttpResponse {
 	my $device = $hash->{NAME};
 	# wenn ein Fehler bei der HTTP Abfrage aufgetreten ist wie z.B. Timeout, weil IP nicht erreichbar ist
 	if($err ne "") {
-		Log3 $name, 3, "error while requesting ".$param->{url}." - $err - Data -> $data"; # Eintrag f√ºrs Log
+		Log3 $name, 3, "error while requesting ".$param->{url}." - $err - Data -> $data"; # Eintrag fv∫rs Log
 		readingsSingleUpdate( $hash, "fullResponse", "$err", 1 );
 		$hash->{NETWORK_STATE} = 'offline';
 	}
-	# wenn die Abfrage erfolgreich war ($data enth≈ lt die Ergebnisdaten des HTTP Aufrufes)
+	# wenn die Abfrage erfolgreich war ($data enthò lt die Ergebnisdaten des HTTP Aufrufes)
 	elsif($data ne "") {
 		Log3 $name, 4, "Twinkly ($name) - Data: $data";
 		# Check JSON String if valid
@@ -777,7 +776,7 @@ sub Twinkly_ParseHttpResponse {
 				json2reading($defs{$device}, $data);
 				Log3 $name, 4, "Twinkly ($name) - url -> " .$url ." data -> $data";
 				if ($url =~ /movies/) {
-					# Vorhandene Movies ermitteln und aufbereiten f√ºr den Set-Befehl
+					# Vorhandene Movies ermitteln und aufbereiten fv∫r den Set-Befehl
 					# Wenn es nur ein Movie gibt, gibt es keinen seperator (,)
 					my ($movies) = getMovies($hash);
 					if ($movies ne 'undef') {
