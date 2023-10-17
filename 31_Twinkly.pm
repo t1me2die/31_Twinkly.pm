@@ -46,6 +46,7 @@
 # 2022-12-15 (v0.1.8) refactoring some code (only one package, tip from CoolTux https://forum.fhem.de/index.php/topic,130432.msg1251505.html#msg1251505)
 # 2022-12-16 (v0.1.9) exclude movie-function for Gen1 Devices
 # 2022-12-18 (v0.2.0) problems with parameters
+# 2023-10-17 (v0.2.1) Added some more Devices for automatic recognition
 #
 # To-Do: 
 # Check if the InternalTimer and the NOTIFYDEV correctly work - sometimes I think the modul will be called to often! 
@@ -129,7 +130,7 @@ sub Initialize {
         "interval "
       . "disable:1 "
       . "disabledForIntervals "
-      . "model:ClusterAWW,ClusterRGB,CurtainAWW,CurtainRGB,CurtainRGBW,DotsRGB,FestoonAWW,FestoonRGB,FlexRGB,IcicleAWW,IcicleRGB,IcicleRGBW,IcicleRGBGen1,LightTree,LineRGB,Spritzer,StringsAWW,StringsRGB,StringsRGBW "
+      . "model:ClusterAWW,ClusterRGB,CurtainAWW,CurtainRGB,CurtainRGBW,DotsRGB,FestoonAWW,FestoonRGB,FlexRGB,IcicleAWW,IcicleRGB,IcicleRGBW,IcicleRGBGen1,Spritzer,StringsAWW,StringsRGB,StringsRGBW,CandiesCandles,Squares,Flex,Line,Lighttree2D,Lighttree3D,Kranz,Girlande,ChristmastreeRGB,ChristmastreeRGBW,ChristmastreeAWW,VernonSpruce,FallsFir "
       . "blockingCallLoglevel:2,3,4,5 "
       . $readingFnAttributes;
 }
@@ -138,7 +139,7 @@ sub Define {
 	my ( $hash, $def ) = @_;
     
 	my @a = split( "[ \t][ \t]*", $def );
-	my $fversion = "31_Twinkly.pm:0.2.0/2022-12-18";
+	my $fversion = "31_Twinkly.pm:0.2.1/2023-10-17";
 	my $author  = 'https://forum.fhem.de/index.php?action=profile;u=23907';
 
     return "too few parameters: define <name> Twinkly <IP / Hostname>" if ( @a != 3 );
@@ -600,8 +601,8 @@ sub checkModel {
     elsif (ReadingsVal($name,'product_code','') =~ /(S100|S250|S400|S600)/ and ReadingsVal($name,'led_profile','') eq 'RGBW') {
 		CommandAttr( undef, $name . ' model StringsRGBW' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
     }
-    # Dots 200 RGB
-    elsif (ReadingsVal($name,'product_code','') =~ /D200/ and ReadingsVal($name,'led_profile','') eq 'RGB') {
+    # Dots 60 / 200 / 400 RGB
+    elsif (ReadingsVal($name,'product_code','') =~ /(D060|D200|D400)/ and ReadingsVal($name,'led_profile','') eq 'RGB') {
 		CommandAttr( undef, $name . ' model DotsRGB' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
     }
     # Icicle 190 AWW
@@ -616,9 +617,61 @@ sub checkModel {
     elsif (ReadingsVal($name,'product_code','') =~ /I190/ and ReadingsVal($name,'led_profile','') eq 'RGBW') {
 		CommandAttr( undef, $name . ' model IcicleRGBW' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
     }
-	# Wall (icicle) 200 RGB Gen. 1
+    # Wall (icicle) 200 RGB Gen. 1
     elsif (ReadingsVal($name,'product_code','') =~ /I200/ and ReadingsVal($name,'led_profile','') eq 'RGB') {
 		CommandAttr( undef, $name . ' model IcicleRGBGen1' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+    }
+    # Candies Candles
+    elsif (ReadingsVal($name,'product_code','') =~ /(KC100|KC200)/ and ReadingsVal($name,'led_profile','') eq 'RGB') {
+    CommandAttr( undef, $name . ' model CandiesCandles' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+    }
+    # Squares
+    elsif (ReadingsVal($name,'product_code','') =~ /(Q064)/ and ReadingsVal($name,'led_profile','') eq 'RGB') {
+    CommandAttr( undef, $name . ' model Squares' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+    }
+    # Flex
+    elsif (ReadingsVal($name,'product_code','') =~ /(FL200|FL300)/ and ReadingsVal($name,'led_profile','') eq 'RGB') {
+    CommandAttr( undef, $name . ' model Flex' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+    }
+    # Line
+    elsif (ReadingsVal($name,'product_code','') =~ /L100/ and ReadingsVal($name,'led_profile','') eq 'RGB') {
+    CommandAttr( undef, $name . ' model Line' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+    }
+    # Lighttree 2D
+    elsif (ReadingsVal($name,'product_code','') =~ /WT050/ and ReadingsVal($name,'led_profile','') eq 'RGB') {
+    CommandAttr( undef, $name . ' model Lighttree2D' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+    }
+    # Lighttree 3D
+    elsif (ReadingsVal($name,'product_code','') =~ /(P300|P500|P750|P01K|P1K2)/ and ReadingsVal($name,'led_profile','') eq 'RGB') {
+    CommandAttr( undef, $name . ' model Lighttree3D' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+    }
+    # Kranz
+    elsif (ReadingsVal($name,'product_code','') =~ /R050/ and ReadingsVal($name,'led_profile','') eq 'RGB') {
+    CommandAttr( undef, $name . ' model Kranz' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+    }
+    # Girlande
+    elsif (ReadingsVal($name,'product_code','') =~ /G050/ and ReadingsVal($name,'led_profile','') eq 'RGB') {
+    CommandAttr( undef, $name . ' model Girlande' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+    }
+    # Christmastree RGB
+    elsif (ReadingsVal($name,'product_code','') =~ /(T250|T400|T500)/ and ReadingsVal($name,'led_profile','') eq 'RGB') {
+    CommandAttr( undef, $name . ' model ChristmastreeRGB' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+    }
+    # Christmastree RGBW
+    elsif (ReadingsVal($name,'product_code','') =~ /T400/ and ReadingsVal($name,'led_profile','') eq 'RGBW') {
+    CommandAttr( undef, $name . ' model ChristmastreeRGBW' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+    }
+    # Christmastree AWW
+    elsif (ReadingsVal($name,'product_code','') =~ /(T250|T400|T500)/ and ReadingsVal($name,'led_profile','') eq 'AWW') {
+    CommandAttr( undef, $name . ' model ChristmastreeAWW' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+    }
+    # Vernon Spruce Pre-lit Tree RGB
+    elsif (ReadingsVal($name,'product_code','') =~ /TG70P3G21P02/ and ReadingsVal($name,'led_profile','') eq 'RGB') {
+    CommandAttr( undef, $name . ' model VernonSpruce' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+    }
+    # Falls Fir Pre-lit Baum RGB
+    elsif (ReadingsVal($name,'product_code','') =~ /TG70P3D93P08/ and ReadingsVal($name,'led_profile','') eq 'RGB') {
+    CommandAttr( undef, $name . ' model FallsFir' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
     }
     else {
 		readingsSingleUpdate( $hash, "state", "in progress", 1 );
@@ -1036,4 +1089,5 @@ sub parseJson {
 =end html_DE
 
 =cut
+  
   
