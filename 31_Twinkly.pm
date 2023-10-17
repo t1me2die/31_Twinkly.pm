@@ -5,7 +5,7 @@
 #
 # Developed by Mathias Passow -> Contact -> https://forum.fhem.de/index.php?action=profile;u=23907
 #
-#  (c) 2022-2022 Copyright: 
+#  (c) 2022-2023 Copyright: 
 #
 #  This script is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
