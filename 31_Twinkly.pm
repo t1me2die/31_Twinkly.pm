@@ -5,7 +5,7 @@
 #
 # Developed by Mathias Passow -> Contact -> https://forum.fhem.de/index.php?action=profile;u=23907
 #
-#  (c) 2022-2023 Copyright: 
+#  (c) 2022-2022 Copyright: 
 #
 #  This script is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -47,6 +47,7 @@
 # 2022-12-16 (v0.1.9) exclude movie-function for Gen1 Devices
 # 2022-12-18 (v0.2.0) problems with parameters
 # 2023-10-17 (v0.2.1) Added some more Devices for automatic recognition
+# 2023-12-04 (v0.2.2) added: deleteMovies to make sure there is no old (obsolete) data
 #
 # To-Do: 
 # Check if the InternalTimer and the NOTIFYDEV correctly work - sometimes I think the modul will be called to often! 
@@ -139,7 +140,7 @@ sub Define {
 	my ( $hash, $def ) = @_;
     
 	my @a = split( "[ \t][ \t]*", $def );
-	my $fversion = "31_Twinkly.pm:0.2.1/2023-10-17";
+	my $fversion = "31_Twinkly.pm:0.2.2/2023-12-04";
 	my $author  = 'https://forum.fhem.de/index.php?action=profile;u=23907';
 
     return "too few parameters: define <name> Twinkly <IP / Hostname>" if ( @a != 3 );
@@ -242,7 +243,7 @@ sub Attr {
 		CommandAttr( undef, $name . ' icon hue_room_nursery' ) if ( AttrVal( $name, 'icon', 'none' ) eq 'none' and $attrVal =~ /Spritzer/);
 		CommandAttr( undef, $name . ' icon hue_filled_lightstrip' ) if ( AttrVal( $name, 'icon', 'none' ) eq 'none' and $attrVal =~ /(String|Line)/);
 		CommandAttr( undef, $name . ' icon light_fairy_lights' ) if ( AttrVal( $name, 'icon', 'none' ) eq 'none' and $attrVal =~ /(Cluster|Festoon)/);
-		# webCmd setzen fv∫r Frontend, falls Model angegeben / ermittelt wurde
+		# webCmd setzen fvºr Frontend, falls Model angegeben / ermittelt wurde
 		CommandAttr( undef, $name . ' webCmd brightness:hue:on:off' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' and $attrVal =~ /(RGB|Spritzer|LightTree)/ );
 		CommandAttr( undef, $name . ' webCmd brightness:ct:on:off' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' and $attrVal =~ /AWW/);
     }
@@ -254,7 +255,7 @@ sub Notify {
     my ( $hash, $dev ) = @_;
 	
     my $name = $hash->{NAME};
-    # Mir ist nicht ganz klar, warum ich bei sâmtlichen Notifys, obwohl das Geraet disabled ist trotzdem eine stateRequestTimer aufrufen moechte
+    # Mir ist nicht ganz klar, warum ich bei s‰mtlichen Notifys, obwohl das Geraet disabled ist trotzdem eine stateRequestTimer aufrufen moechte
     if ( IsDisabled($name) ) {
 		Log3 $name, 5, "Twinkly Notify ($name) - Komme ich hier rein? hash -> $hash - dev -> $dev (" .$dev->{NAME} .")";
 		#return stateRequestTimer($hash);
@@ -367,7 +368,7 @@ sub Set {
     
     #Log3 $name, 4, "Twinkly ($name) - hash -> $hash - aa -> @aa - cmd -> $cmd - args -> @args";
     
-    # Vorhandene Movies ermitteln und aufbereiten fv∫r den Set-Befehl
+    # Vorhandene Movies ermitteln und aufbereiten fvºr den Set-Befehl
     # Wenn es nur ein Movie gibt, gibt es keinen seperator (,)
     if ($movies ne '') {
       my $pos = index($movies,',');
@@ -721,6 +722,14 @@ sub getMovies {
 	}
 }
 
+sub deleteMovies {
+	my $hash    = shift;
+	
+	my $device  = $hash->{NAME};
+	fhem ("deletereading $device movies_.*", 1);
+	
+}
+
 sub Twinkly_PerformHttpRequest {
 	my ($hash,$method,$path,$args) = @_;
 	
@@ -799,11 +808,11 @@ sub Twinkly_ParseHttpResponse {
 	my $device = $hash->{NAME};
 	# wenn ein Fehler bei der HTTP Abfrage aufgetreten ist wie z.B. Timeout, weil IP nicht erreichbar ist
 	if($err ne "") {
-		Log3 $name, 3, "error while requesting ".$param->{url}." - $err - Data -> $data"; # Eintrag fv∫rs Log
+		Log3 $name, 3, "error while requesting ".$param->{url}." - $err - Data -> $data"; # Eintrag fvºrs Log
 		readingsSingleUpdate( $hash, "fullResponse", "$err", 1 );
 		$hash->{NETWORK_STATE} = 'offline';
 	}
-	# wenn die Abfrage erfolgreich war ($data enthò lt die Ergebnisdaten des HTTP Aufrufes)
+	# wenn die Abfrage erfolgreich war ($data enth˜ lt die Ergebnisdaten des HTTP Aufrufes)
 	elsif($data ne "") {
 		Log3 $name, 4, "Twinkly ($name) - Data: $data";
 		# Check JSON String if valid
@@ -829,7 +838,10 @@ sub Twinkly_ParseHttpResponse {
 				json2reading($defs{$device}, $data);
 				Log3 $name, 4, "Twinkly ($name) - url -> " .$url ." data -> $data";
 				if ($url =~ /movies/) {
-					# Vorhandene Movies ermitteln und aufbereiten fv∫r den Set-Befehl
+					# Sicherheitshalber Movies loeschen, bevor gelesen wird, falls alte Leichen vorhanden sein sollten
+					deleteMovies($hash);
+					#					
+					# Vorhandene Movies ermitteln und aufbereiten fvºr den Set-Befehl
 					# Wenn es nur ein Movie gibt, gibt es keinen seperator (,)
 					my ($movies) = getMovies($hash);
 					if ($movies ne 'undef') {
