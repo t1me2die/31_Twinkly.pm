@@ -131,7 +131,7 @@ sub Initialize {
         "interval "
       . "disable:1 "
       . "disabledForIntervals "
-      . "model:ClusterAWW,ClusterRGB,CurtainAWW,CurtainRGB,CurtainRGBW,DotsRGB,FestoonAWW,FestoonRGB,FlexRGB,IcicleAWW,IcicleRGB,IcicleRGBW,IcicleRGBGen1,Spritzer,StringsAWW,StringsRGB,StringsRGBW,CandiesCandles,Squares,Flex,Line,Lighttree2D,Lighttree3D,Kranz,Girlande,ChristmastreeRGB,ChristmastreeRGBW,ChristmastreeAWW,VernonSpruce,FallsFir "
+      . "model:ClusterAWW,ClusterRGB,CurtainAWW,CurtainRGB,CurtainRGBW,DotsRGB,FestoonAWW,FestoonRGB,FlexRGB,IcicleAWW,IcicleRGB,IcicleRGBW,IcicleRGBGen1,Spritzer,StringsAWW,StringsRGB,StringsRGBW,CandiesCandles,CandiesPearls,CandiesStars,CandiesHearts,Squares,Flex,Line,Lighttree2D,Lighttree3D,Kranz,Girlande,ChristmastreeRGB,ChristmastreeRGBW,ChristmastreeAWW,VernonSpruce,FallsFir "
       . "blockingCallLoglevel:2,3,4,5 "
       . $readingFnAttributes;
 }
@@ -243,7 +243,7 @@ sub Attr {
 		CommandAttr( undef, $name . ' icon hue_room_nursery' ) if ( AttrVal( $name, 'icon', 'none' ) eq 'none' and $attrVal =~ /Spritzer/);
 		CommandAttr( undef, $name . ' icon hue_filled_lightstrip' ) if ( AttrVal( $name, 'icon', 'none' ) eq 'none' and $attrVal =~ /(String|Line)/);
 		CommandAttr( undef, $name . ' icon light_fairy_lights' ) if ( AttrVal( $name, 'icon', 'none' ) eq 'none' and $attrVal =~ /(Cluster|Festoon)/);
-		# webCmd setzen fvºr Frontend, falls Model angegeben / ermittelt wurde
+		# webCmd setzen fv∫r Frontend, falls Model angegeben / ermittelt wurde
 		CommandAttr( undef, $name . ' webCmd brightness:hue:on:off' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' and $attrVal =~ /(RGB|Spritzer|LightTree)/ );
 		CommandAttr( undef, $name . ' webCmd brightness:ct:on:off' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' and $attrVal =~ /AWW/);
     }
@@ -255,7 +255,7 @@ sub Notify {
     my ( $hash, $dev ) = @_;
 	
     my $name = $hash->{NAME};
-    # Mir ist nicht ganz klar, warum ich bei s‰mtlichen Notifys, obwohl das Geraet disabled ist trotzdem eine stateRequestTimer aufrufen moechte
+    # Mir ist nicht ganz klar, warum ich bei sâmtlichen Notifys, obwohl das Geraet disabled ist trotzdem eine stateRequestTimer aufrufen moechte
     if ( IsDisabled($name) ) {
 		Log3 $name, 5, "Twinkly Notify ($name) - Komme ich hier rein? hash -> $hash - dev -> $dev (" .$dev->{NAME} .")";
 		#return stateRequestTimer($hash);
@@ -368,7 +368,7 @@ sub Set {
     
     #Log3 $name, 4, "Twinkly ($name) - hash -> $hash - aa -> @aa - cmd -> $cmd - args -> @args";
     
-    # Vorhandene Movies ermitteln und aufbereiten fvºr den Set-Befehl
+    # Vorhandene Movies ermitteln und aufbereiten fv∫r den Set-Befehl
     # Wenn es nur ein Movie gibt, gibt es keinen seperator (,)
     if ($movies ne '') {
       my $pos = index($movies,',');
@@ -626,6 +626,18 @@ sub checkModel {
     elsif (ReadingsVal($name,'product_code','') =~ /(KC100|KC200)/ and ReadingsVal($name,'led_profile','') eq 'RGB') {
     CommandAttr( undef, $name . ' model CandiesCandles' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
     }
+    # Candies Pearls
+    elsif (ReadingsVal($name,'product_code','') =~ /(KP100|KP200)/ and ReadingsVal($name,'led_profile','') eq 'RGB') {
+    CommandAttr( undef, $name . ' model CandiesPearls' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+    }
+    # Candies Stars
+    elsif (ReadingsVal($name,'product_code','') =~ /(KS100|KS200)/ and ReadingsVal($name,'led_profile','') eq 'RGB') {
+    CommandAttr( undef, $name . ' model CandiesStars' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+    }
+    # Candies Hearts
+    elsif (ReadingsVal($name,'product_code','') =~ /(KH100|KH200)/ and ReadingsVal($name,'led_profile','') eq 'RGB') {
+    CommandAttr( undef, $name . ' model CandiesHearts' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+    }
     # Squares
     elsif (ReadingsVal($name,'product_code','') =~ /(Q064)/ and ReadingsVal($name,'led_profile','') eq 'RGB') {
     CommandAttr( undef, $name . ' model Squares' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
@@ -808,11 +820,11 @@ sub Twinkly_ParseHttpResponse {
 	my $device = $hash->{NAME};
 	# wenn ein Fehler bei der HTTP Abfrage aufgetreten ist wie z.B. Timeout, weil IP nicht erreichbar ist
 	if($err ne "") {
-		Log3 $name, 3, "error while requesting ".$param->{url}." - $err - Data -> $data"; # Eintrag fvºrs Log
+		Log3 $name, 3, "error while requesting ".$param->{url}." - $err - Data -> $data"; # Eintrag fv∫rs Log
 		readingsSingleUpdate( $hash, "fullResponse", "$err", 1 );
 		$hash->{NETWORK_STATE} = 'offline';
 	}
-	# wenn die Abfrage erfolgreich war ($data enth˜ lt die Ergebnisdaten des HTTP Aufrufes)
+	# wenn die Abfrage erfolgreich war ($data enthò lt die Ergebnisdaten des HTTP Aufrufes)
 	elsif($data ne "") {
 		Log3 $name, 4, "Twinkly ($name) - Data: $data";
 		# Check JSON String if valid
@@ -841,7 +853,7 @@ sub Twinkly_ParseHttpResponse {
 					# Sicherheitshalber Movies loeschen, bevor gelesen wird, falls alte Leichen vorhanden sein sollten
 					deleteMovies($hash);
 					#					
-					# Vorhandene Movies ermitteln und aufbereiten fvºr den Set-Befehl
+					# Vorhandene Movies ermitteln und aufbereiten fv∫r den Set-Befehl
 					# Wenn es nur ein Movie gibt, gibt es keinen seperator (,)
 					my ($movies) = getMovies($hash);
 					if ($movies ne 'undef') {
