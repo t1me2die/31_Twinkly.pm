@@ -51,6 +51,7 @@
 # 2024-01-07 (v0.2.3) deactivated "deleteMovies" cause of crashes. 
 #                     Notiz: Make sure you have always more Movies saved by App as readings. 
 #                     If you have less movies saved please make an "deletereading Twinkly_Device movies_.*" first!
+# 2024-01-07 (v0.2.4) reactivated "deleteMovies" 
 #
 # To-Do: 
 # Check if the InternalTimer and the NOTIFYDEV correctly work - sometimes I think the modul will be called to often! 
@@ -81,6 +82,7 @@ BEGIN {
           readingsBulkUpdateIfChanged
           readingsBeginUpdate
           readingsEndUpdate
+          readingsDelete
           defs
           modules
           Log3
@@ -93,7 +95,7 @@ BEGIN {
           gettimeofday
           InternalTimer
           RemoveInternalTimer
-		  readingFnAttributes
+          readingFnAttributes
           DoTrigger
           BlockingKill
           BlockingCall
@@ -143,7 +145,7 @@ sub Define {
 	my ( $hash, $def ) = @_;
     
 	my @a = split( "[ \t][ \t]*", $def );
-	my $fversion = "31_Twinkly.pm:0.2.3/2024-01-07";
+	my $fversion = "31_Twinkly.pm:0.2.4/2024-01-07";
 	my $author  = 'https://forum.fhem.de/index.php?action=profile;u=23907';
 
     return "too few parameters: define <name> Twinkly <IP / Hostname>" if ( @a != 3 );
@@ -739,10 +741,15 @@ sub getMovies {
 
 sub deleteMovies {
 	my $hash    = shift;
-	
 	my $device  = $hash->{NAME};
-	fhem ("deletereading $device movies_.*", 1);
-	
+	my @arr = keys %{$defs{$device}->{READINGS}};
+  
+  foreach my $reading (@arr){
+    if ($reading =~ /movies_/){
+      readingsDelete($hash, $reading);
+      Log3 $device, 5, "deleteMovies - Reading -> $reading";
+    }
+  }
 }
 
 sub Twinkly_PerformHttpRequest {
@@ -850,12 +857,13 @@ sub Twinkly_ParseHttpResponse {
 			}
 			# Brightness, Saturation und color haben "mode" im JSON, dadurch wird das eigentliche Mode Reading "zerstoert"
 			if ($url !~ /(brightness|saturation|color)/ and $data ne 'Invalid Token') {
-				json2reading($defs{$device}, $data);
-				Log3 $name, 4, "Twinkly ($name) - url -> " .$url ." data -> $data";
 				if ($url =~ /movies/) {
 					# Sicherheitshalber Movies loeschen, bevor gelesen wird, falls alte Leichen vorhanden sein sollten
-					#deleteMovies($hash);
-					#					
+					deleteMovies($hash);
+        }
+        json2reading($defs{$device}, $data);
+				Log3 $name, 4, "Twinkly ($name) - url -> " .$url ." data -> $data";
+				if ($url =~ /movies/) {
 					# Vorhandene Movies ermitteln und aufbereiten fv∫r den Set-Befehl
 					# Wenn es nur ein Movie gibt, gibt es keinen seperator (,)
 					my ($movies) = getMovies($hash);
