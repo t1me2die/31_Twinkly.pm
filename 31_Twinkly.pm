@@ -48,6 +48,9 @@
 # 2022-12-18 (v0.2.0) problems with parameters
 # 2023-10-17 (v0.2.1) Added some more Devices for automatic recognition
 # 2023-12-04 (v0.2.2) added: deleteMovies to make sure there is no old (obsolete) data
+# 2024-01-07 (v0.2.3) deactivated "deleteMovies" cause of crashes. 
+#                     Notiz: Make sure you have always more Movies saved by App as readings. 
+#                     If you have less movies saved please make an "deletereading Twinkly_Device movies_.*" first!
 #
 # To-Do: 
 # Check if the InternalTimer and the NOTIFYDEV correctly work - sometimes I think the modul will be called to often! 
@@ -140,7 +143,7 @@ sub Define {
 	my ( $hash, $def ) = @_;
     
 	my @a = split( "[ \t][ \t]*", $def );
-	my $fversion = "31_Twinkly.pm:0.2.2/2023-12-04";
+	my $fversion = "31_Twinkly.pm:0.2.3/2024-01-07";
 	my $author  = 'https://forum.fhem.de/index.php?action=profile;u=23907';
 
     return "too few parameters: define <name> Twinkly <IP / Hostname>" if ( @a != 3 );
@@ -851,7 +854,7 @@ sub Twinkly_ParseHttpResponse {
 				Log3 $name, 4, "Twinkly ($name) - url -> " .$url ." data -> $data";
 				if ($url =~ /movies/) {
 					# Sicherheitshalber Movies loeschen, bevor gelesen wird, falls alte Leichen vorhanden sein sollten
-					deleteMovies($hash);
+					#deleteMovies($hash);
 					#					
 					# Vorhandene Movies ermitteln und aufbereiten fv∫r den Set-Befehl
 					# Wenn es nur ein Movie gibt, gibt es keinen seperator (,)
