@@ -52,7 +52,7 @@
 #                     Notiz: Make sure you have always more Movies saved by App as readings. 
 #                     If you have less movies saved please make an "deletereading Twinkly_Device movies_.*" first!
 # 2024-01-07 (v0.2.4) reactivated "deleteMovies" 
-#
+# 2024-01-14 (v0.2.5) optimization "deleteMovies"
 # To-Do: 
 # Check if the InternalTimer and the NOTIFYDEV correctly work - sometimes I think the modul will be called to often! 
 ###############################################################################
@@ -145,7 +145,7 @@ sub Define {
 	my ( $hash, $def ) = @_;
     
 	my @a = split( "[ \t][ \t]*", $def );
-	my $fversion = "31_Twinkly.pm:0.2.4/2024-01-07";
+	my $fversion = "31_Twinkly.pm:0.2.5/2024-01-14";
 	my $author  = 'https://forum.fhem.de/index.php?action=profile;u=23907';
 
     return "too few parameters: define <name> Twinkly <IP / Hostname>" if ( @a != 3 );
@@ -827,6 +827,7 @@ sub Twinkly_ParseHttpResponse {
 	my $hash   = $param->{hash};
 	my $url    = $param->{url};
 	my $name   = $hash->{NAME};
+  my $method = $hash->{method};
 	my $device = $hash->{NAME};
 	# wenn ein Fehler bei der HTTP Abfrage aufgetreten ist wie z.B. Timeout, weil IP nicht erreichbar ist
 	if($err ne "") {
@@ -857,14 +858,14 @@ sub Twinkly_ParseHttpResponse {
 			}
 			# Brightness, Saturation und color haben "mode" im JSON, dadurch wird das eigentliche Mode Reading "zerstoert"
 			if ($url !~ /(brightness|saturation|color)/ and $data ne 'Invalid Token') {
-				if ($url =~ /movies/) {
+				if ($url =~ /movies/ and $method eq 'GET') {
 					# Sicherheitshalber Movies loeschen, bevor gelesen wird, falls alte Leichen vorhanden sein sollten
 					deleteMovies($hash);
         }
         json2reading($defs{$device}, $data);
 				Log3 $name, 4, "Twinkly ($name) - url -> " .$url ." data -> $data";
 				if ($url =~ /movies/) {
-					# Vorhandene Movies ermitteln und aufbereiten fv∫r den Set-Befehl
+          # Vorhandene Movies ermitteln und aufbereiten fv∫r den Set-Befehl
 					# Wenn es nur ein Movie gibt, gibt es keinen seperator (,)
 					my ($movies) = getMovies($hash);
 					if ($movies ne 'undef') {
