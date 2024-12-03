@@ -577,119 +577,119 @@ sub checkModel {
     my $name = $hash->{NAME};
     # Spritzer
     if (ReadingsVal($name,'product_code','') =~ /B200/) {
-		CommandAttr( undef, $name . ' model Spritzer' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+      CommandAttr( undef, $name . ' model Spritzer' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
     }
     # Festoon RGB
     elsif (ReadingsVal($name,'product_code','') =~ /(F020|F040)/ and ReadingsVal($name,'led_profile','') eq 'RGB') {
-		CommandAttr( undef, $name . ' model FestoonRGB' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+      CommandAttr( undef, $name . ' model FestoonRGB' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
     }
     # Festoon AWW
     elsif (ReadingsVal($name,'product_code','') =~ /(F020|F040)/ and ReadingsVal($name,'led_profile','') eq 'AWW') {
-		CommandAttr( undef, $name . ' model FestoonAWW' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+      CommandAttr( undef, $name . ' model FestoonAWW' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
     }
     # Cluster 400 RGB
     elsif (ReadingsVal($name,'product_code','') =~ /C400/ and ReadingsVal($name,'led_profile','') eq 'RGB') {
-		CommandAttr( undef, $name . ' model ClusterRGB' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+      CommandAttr( undef, $name . ' model ClusterRGB' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
     }
     # Cluster 400 AWW
     elsif (ReadingsVal($name,'product_code','') =~ /C400/ and ReadingsVal($name,'led_profile','') eq 'AWW') {
-		CommandAttr( undef, $name . ' model ClusterAWW' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
-    }
-    # Strings 100 / 250 / 400 / 600 AWW
-    elsif (ReadingsVal($name,'product_code','') =~ /(S100|S250|S400|S600)/ and ReadingsVal($name,'led_profile','') eq 'AWW') {
-		CommandAttr( undef, $name . ' model StringsAWW' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
-    }
-    # Strings 100 / 250 / 400 / 600 RGB
-    elsif (ReadingsVal($name,'product_code','') =~ /(S100|S250|S400|S600)/ and ReadingsVal($name,'led_profile','') eq 'RGB') {
-		CommandAttr( undef, $name . ' model StringsRGB' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
-    }
-    # Strings 100 / 250 / 400 / 600 RGBW
-    elsif (ReadingsVal($name,'product_code','') =~ /(S100|S250|S400|S600)/ and ReadingsVal($name,'led_profile','') eq 'RGBW') {
-		CommandAttr( undef, $name . ' model StringsRGBW' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
-    }
-    # Dots 60 / 200 / 400 RGB
-    elsif (ReadingsVal($name,'product_code','') =~ /(D060|D200|D400)/ and ReadingsVal($name,'led_profile','') eq 'RGB') {
-		CommandAttr( undef, $name . ' model DotsRGB' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
-    }
-    # Icicle 190 AWW
-    elsif (ReadingsVal($name,'product_code','') =~ /I190/ and ReadingsVal($name,'led_profile','') eq 'AWW') {
-		CommandAttr( undef, $name . ' model IcicleAWW' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
-    }
-    # Icicle 190 RGB
-    elsif (ReadingsVal($name,'product_code','') =~ /I190/ and ReadingsVal($name,'led_profile','') eq 'RGB') {
-		CommandAttr( undef, $name . ' model IcicleRGB' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
-    }
-    # Icicle 190 RGBW
-    elsif (ReadingsVal($name,'product_code','') =~ /I190/ and ReadingsVal($name,'led_profile','') eq 'RGBW') {
-		CommandAttr( undef, $name . ' model IcicleRGBW' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
-    }
-    # Wall (icicle) 200 RGB Gen. 1
-    elsif (ReadingsVal($name,'product_code','') =~ /I200/ and ReadingsVal($name,'led_profile','') eq 'RGB') {
-		CommandAttr( undef, $name . ' model IcicleRGBGen1' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
-    }
-    # Candies Candles
-    elsif (ReadingsVal($name,'product_code','') =~ /(KC100|KC200)/ and ReadingsVal($name,'led_profile','') eq 'RGB') {
-    CommandAttr( undef, $name . ' model CandiesCandlesRGB' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
-    }
-    # Candies Pearls
-    elsif (ReadingsVal($name,'product_code','') =~ /(KP100|KP200)/ and ReadingsVal($name,'led_profile','') eq 'RGB') {
-    CommandAttr( undef, $name . ' model CandiesPearlsRGB' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+      CommandAttr( undef, $name . ' model ClusterAWW' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
     }
     # Candies Stars
     elsif (ReadingsVal($name,'product_code','') =~ /(KS100|KS200)/ and ReadingsVal($name,'led_profile','') eq 'RGB') {
-    CommandAttr( undef, $name . ' model CandiesStarsRGB' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+      CommandAttr( undef, $name . ' model CandiesStarsRGB' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+    } 
+    # Strings 100 / 250 / 400 / 600 AWW
+    elsif (ReadingsVal($name,'product_code','') =~ /(S100|S250|S400|S600)/ and ReadingsVal($name,'led_profile','') eq 'AWW') {
+      CommandAttr( undef, $name . ' model StringsAWW' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+    }
+    # Strings 100 / 250 / 400 / 600 RGB
+    elsif (ReadingsVal($name,'product_code','') =~ /(S100|S250|S400|S600)/ and ReadingsVal($name,'led_profile','') eq 'RGB') {
+      CommandAttr( undef, $name . ' model StringsRGB' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+    }
+    # Strings 100 / 250 / 400 / 600 RGBW
+    elsif (ReadingsVal($name,'product_code','') =~ /(S100|S250|S400|S600)/ and ReadingsVal($name,'led_profile','') eq 'RGBW') {
+      CommandAttr( undef, $name . ' model StringsRGBW' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+    }
+    # Dots 60 / 200 / 400 RGB
+    elsif (ReadingsVal($name,'product_code','') =~ /(D060|D200|D400)/ and ReadingsVal($name,'led_profile','') eq 'RGB') {
+      CommandAttr( undef, $name . ' model DotsRGB' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+    }
+    # Icicle 190 AWW
+    elsif (ReadingsVal($name,'product_code','') =~ /I190/ and ReadingsVal($name,'led_profile','') eq 'AWW') {
+      CommandAttr( undef, $name . ' model IcicleAWW' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+    }
+    # Icicle 190 RGB
+    elsif (ReadingsVal($name,'product_code','') =~ /I190/ and ReadingsVal($name,'led_profile','') eq 'RGB') {
+      CommandAttr( undef, $name . ' model IcicleRGB' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+    }
+    # Icicle 190 RGBW
+    elsif (ReadingsVal($name,'product_code','') =~ /I190/ and ReadingsVal($name,'led_profile','') eq 'RGBW') {
+      CommandAttr( undef, $name . ' model IcicleRGBW' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+    }
+    # Wall (icicle) 200 RGB Gen. 1
+    elsif (ReadingsVal($name,'product_code','') =~ /I200/ and ReadingsVal($name,'led_profile','') eq 'RGB') {
+      CommandAttr( undef, $name . ' model IcicleRGBGen1' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+    }
+    # Candies Candles
+    elsif (ReadingsVal($name,'product_code','') =~ /(KC100|KC200)/ and ReadingsVal($name,'led_profile','') eq 'RGB') {
+      CommandAttr( undef, $name . ' model CandiesCandlesRGB' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+    }
+    # Candies Pearls
+    elsif (ReadingsVal($name,'product_code','') =~ /(KP100|KP200)/ and ReadingsVal($name,'led_profile','') eq 'RGB') {
+      CommandAttr( undef, $name . ' model CandiesPearlsRGB' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
     }
     # Candies Hearts
     elsif (ReadingsVal($name,'product_code','') =~ /(KH100|KH200)/ and ReadingsVal($name,'led_profile','') eq 'RGB') {
-    CommandAttr( undef, $name . ' model CandiesHeartsRGB' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+      CommandAttr( undef, $name . ' model CandiesHeartsRGB' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
     }
     # Squares
     elsif (ReadingsVal($name,'product_code','') =~ /(Q064)/ and ReadingsVal($name,'led_profile','') eq 'RGB') {
-    CommandAttr( undef, $name . ' model SquaresRGB' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+      CommandAttr( undef, $name . ' model SquaresRGB' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
     }
     # Flex
     elsif (ReadingsVal($name,'product_code','') =~ /(FL200|FL300)/ and ReadingsVal($name,'led_profile','') eq 'RGB') {
-    CommandAttr( undef, $name . ' model FlexRGB' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+      CommandAttr( undef, $name . ' model FlexRGB' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
     }
     # Line
     elsif (ReadingsVal($name,'product_code','') =~ /L100/ and ReadingsVal($name,'led_profile','') eq 'RGB') {
-    CommandAttr( undef, $name . ' model LineRGB' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+      CommandAttr( undef, $name . ' model LineRGB' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
     }
     # Lighttree 2D
     elsif (ReadingsVal($name,'product_code','') =~ /WT050/ and ReadingsVal($name,'led_profile','') eq 'RGB') {
-    CommandAttr( undef, $name . ' model Lighttree2DRGB' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+      CommandAttr( undef, $name . ' model Lighttree2DRGB' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
     }
     # Lighttree 3D
     elsif (ReadingsVal($name,'product_code','') =~ /(P300|P500|P750|P01K|P1K2)/ and ReadingsVal($name,'led_profile','') eq 'RGB') {
-    CommandAttr( undef, $name . ' model Lighttree3DRGB' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+      CommandAttr( undef, $name . ' model Lighttree3DRGB' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
     }
     # Kranz
     elsif (ReadingsVal($name,'product_code','') =~ /R050/ and ReadingsVal($name,'led_profile','') eq 'RGB') {
-    CommandAttr( undef, $name . ' model KranzRGB' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+      CommandAttr( undef, $name . ' model KranzRGB' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
     }
     # Girlande
     elsif (ReadingsVal($name,'product_code','') =~ /G050/ and ReadingsVal($name,'led_profile','') eq 'RGB') {
-    CommandAttr( undef, $name . ' model GirlandeRGB' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+      CommandAttr( undef, $name . ' model GirlandeRGB' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
     }
     # Christmastree RGB
     elsif (ReadingsVal($name,'product_code','') =~ /(T250|T400|T500)/ and ReadingsVal($name,'led_profile','') eq 'RGB') {
-    CommandAttr( undef, $name . ' model ChristmastreeRGB' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+      CommandAttr( undef, $name . ' model ChristmastreeRGB' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
     }
     # Christmastree RGBW
     elsif (ReadingsVal($name,'product_code','') =~ /T400/ and ReadingsVal($name,'led_profile','') eq 'RGBW') {
-    CommandAttr( undef, $name . ' model ChristmastreeRGBW' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+      CommandAttr( undef, $name . ' model ChristmastreeRGBW' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
     }
     # Christmastree AWW
     elsif (ReadingsVal($name,'product_code','') =~ /(T250|T400|T500)/ and ReadingsVal($name,'led_profile','') eq 'AWW') {
-    CommandAttr( undef, $name . ' model ChristmastreeAWW' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+      CommandAttr( undef, $name . ' model ChristmastreeAWW' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
     }
     # Vernon Spruce Pre-lit Tree RGB
     elsif (ReadingsVal($name,'product_code','') =~ /TG70P3G21P02/ and ReadingsVal($name,'led_profile','') eq 'RGB') {
-    CommandAttr( undef, $name . ' model VernonSpruceRGB' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+      CommandAttr( undef, $name . ' model VernonSpruceRGB' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
     }
     # Falls Fir Pre-lit Baum RGB
     elsif (ReadingsVal($name,'product_code','') =~ /TG70P3D93P08/ and ReadingsVal($name,'led_profile','') eq 'RGB') {
-    CommandAttr( undef, $name . ' model FallsFirRGB' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
+      CommandAttr( undef, $name . ' model FallsFirRGB' ) if ( AttrVal( $name, 'model', 'none' ) eq 'none' );
     }
     else {
 		readingsSingleUpdate( $hash, "state", "in progress", 1 );
